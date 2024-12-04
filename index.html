@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Platformer</title>
+        <style>
+            html {
+                margin: 0px;
+            }
+            .game-canvas {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+            }
+        </style>
+    </head>
+
+    <body>
+        <canvas class="game-canvas"></canvas>
+
+        <script type="text/javascript">
+            var Module = {
+                preRun: [],
+                postRun: [],
+                canvas: (function () {
+                    return document.querySelector(".game-canvas");
+                })(),
+            };
+        </script>
+        <script async type="text/javascript" src="build/web/game.js"></script>
+    </body>
+</html>
