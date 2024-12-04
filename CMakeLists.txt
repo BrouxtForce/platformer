@@ -6,6 +6,7 @@ add_executable(game
     src/application.cpp
     src/main.cpp
     src/math.cpp
+    src/renderer.cpp
     src/utility.cpp
 )
 target_include_directories(game PUBLIC
