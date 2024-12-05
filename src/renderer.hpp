@@ -1,9 +1,13 @@
 #pragma once
 
 #include <optional>
+#include <unordered_map>
 
 #include <webgpu/webgpu.hpp>
 #include <SDL3/SDL.h>
+
+#include "scene.hpp"
+#include "buffer.hpp"
 
 class Renderer
 {
@@ -11,7 +15,7 @@ public:
     Renderer() = default;
 
     bool Init(SDL_Window* window);
-    bool Render();
+    bool Render(Scene scene);
 
     std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, wgpu::TextureFormat format);
 
@@ -30,4 +34,14 @@ private:
 
     bool LoadAdapterSync();
     bool LoadDeviceSync();
+
+    wgpu::BindGroupLayout m_BindGroupLayout;
+    wgpu::PipelineLayout m_PipelineLayout;
+
+    struct DrawData
+    {
+        Buffer buffer;
+        wgpu::BindGroup bindGroup;
+    };
+    std::unordered_map<uint32_t, DrawData> m_EntityDrawData;
 };

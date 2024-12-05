@@ -20,6 +20,8 @@ private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
 
-    SDL_Window* window = nullptr;
-    Renderer renderer;
+    SDL_Window* m_Window = nullptr;
+    Renderer m_Renderer;
+
+    Scene m_Scene;
 };

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include <sdl3webgpu.h>
+#include <webgpu/webgpu.hpp>
 
 #include "renderer.hpp"
 #include "utility.hpp"
@@ -43,6 +44,22 @@ bool Renderer::Init(SDL_Window* window)
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
     m_Surface.configure(surfaceConfig);
 
+    wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
+    bindGroupLayoutEntry.binding = 0;
+    bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Material);
+
+    wgpu::BindGroupLayoutDescriptor bindGroupLayoutDescriptor;
+    bindGroupLayoutDescriptor.entryCount = 1;
+    bindGroupLayoutDescriptor.entries = &bindGroupLayoutEntry;
+    m_BindGroupLayout = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+
+    wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor;
+    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout;
+    m_PipelineLayout = m_Device.createPipelineLayout(pipelineLayoutDescriptor);
+
     std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", surfaceConfig.format);
     if (!renderPipeline.has_value())
     {
@@ -53,7 +70,7 @@ bool Renderer::Init(SDL_Window* window)
     return true;
 }
 
-bool Renderer::Render()
+bool Renderer::Render(Scene scene)
 {
     wgpu::TextureView textureView;
     {
@@ -102,7 +119,30 @@ bool Renderer::Render()
 
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     renderEncoder.setPipeline(quadRenderPipeline);
-    renderEncoder.draw(6, 1, 0, 0);
+    for (const Entity& entity : scene.entities)
+    {
+        DrawData& drawData = m_EntityDrawData[entity.id];
+        if (drawData.buffer.IsEmpty())
+        {
+            drawData.buffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+
+            wgpu::BindGroupEntry binding;
+            binding.binding = 0;
+            binding.buffer = drawData.buffer.get();
+            binding.offset = 0;
+            binding.size = sizeof(Material);
+
+            wgpu::BindGroupDescriptor bindGroupDescriptor{};
+            bindGroupDescriptor.layout = m_BindGroupLayout;
+            bindGroupDescriptor.entryCount = 1;
+            bindGroupDescriptor.entries = &binding;
+
+            drawData.bindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+        }
+        drawData.buffer.Write(m_Queue, entity.material);
+        renderEncoder.setBindGroup(0, drawData.bindGroup, 0, nullptr);
+        renderEncoder.draw(6, 1, 0, 0);
+    }
     renderEncoder.end();
 
     wgpu::CommandBuffer commandBuffer = commandEncoder.finish();
@@ -183,7 +223,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     pipelineDescriptor.multisample.mask = ~0u;
     pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
 
-    pipelineDescriptor.layout = nullptr;
+    pipelineDescriptor.layout = m_PipelineLayout;
 
     return m_Device.createRenderPipeline(pipelineDescriptor);
 }
