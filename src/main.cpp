@@ -28,12 +28,19 @@ SDL_AppResult SDL_AppIterate(void* state)
     return SDL_APP_FAILURE;
 }
 
-SDL_AppResult SDL_AppEvent(void* /* state */, SDL_Event* event)
+SDL_AppResult SDL_AppEvent(void* state, SDL_Event* event)
 {
+    Application* application = (Application*)state;
     switch (event->type)
     {
         case SDL_EVENT_QUIT:
             return SDL_APP_SUCCESS;
+        case SDL_EVENT_KEY_DOWN:
+            application->OnKeyDown(event->key);
+            break;
+        case SDL_EVENT_KEY_UP:
+            application->OnKeyUp(event->key);
+            break;
     }
     return SDL_APP_CONTINUE;
 }

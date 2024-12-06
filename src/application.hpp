@@ -16,6 +16,11 @@ public:
     bool Loop();
     void Exit();
 
+    void OnKeyDown(const SDL_KeyboardEvent& event);
+    void OnKeyUp(const SDL_KeyboardEvent& event);
+
+    bool IsKeyDown(SDL_Scancode scancode);
+
 private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
@@ -24,4 +29,6 @@ private:
     Renderer m_Renderer;
 
     Scene m_Scene;
+
+    std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
 };

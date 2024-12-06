@@ -21,6 +21,11 @@ namespace Math
         float2 operator-(const float2& other);
         float2 operator*(const float2& other);
         float2 operator/(const float2& other);
+
+        float2& operator+=(const float2& other);
+        float2& operator-=(const float2& other);
+        float2& operator*=(const float2& other);
+        float2& operator/=(const float2& other);
     };
 
     struct float3
@@ -66,4 +71,6 @@ namespace Math
 
         Matrix3x3(float3 column0, float3 column1, float3 column2);
     };
+
+    float2 Normalize(float2 in);
 }

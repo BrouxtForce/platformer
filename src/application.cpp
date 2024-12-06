@@ -28,16 +28,22 @@ bool Application::Init()
 
 bool Application::Loop()
 {
-    static int frame = 0;
-    frame++;
-
-    float cos = SDL_cosf((float)frame / 60.0f);
-    float sin = SDL_sinf((float)frame / 60.0f);
-
     Entity& entity = m_Scene.entities[0];
-    entity.material.color = Math::Color((cos + 1.0f) / 2.0f, (sin + 1.0f) / 2.0f, 0.0f, 1.0f);
-    entity.transform.position = Math::float2(cos, sin) * 0.5f;
-    entity.transform.scale = (cos + sin) * 0.25f;
+    entity.material.color = Math::Color(0, 0, 1, 1);
+    entity.transform.scale = Math::float2(0.1, 0.1);
+
+    Math::float2 movement = 0.0f;
+    if (IsKeyDown(SDL_SCANCODE_W)) movement.y += 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_A)) movement.x -= 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_S)) movement.y -= 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_D)) movement.x += 1.0f;
+    if (movement.x != 0.0f || movement.y != 0.0f)
+    {
+        movement = Math::Normalize(movement);
+    }
+
+    constexpr float speed = 0.02f;
+    entity.transform.position += movement * speed;
 
     return m_Renderer.Render(m_Scene);
 }
@@ -45,4 +51,22 @@ bool Application::Loop()
 void Application::Exit()
 {
     SDL_DestroyWindow(m_Window);
+}
+
+void Application::OnKeyDown(const SDL_KeyboardEvent& event)
+{
+    assert(event.scancode >= 0 && event.scancode <= m_KeysDown.size());
+    m_KeysDown[event.scancode] = 1;
+}
+
+void Application::OnKeyUp(const SDL_KeyboardEvent& event)
+{
+    assert(event.scancode >= 0 && event.scancode <= m_KeysDown.size());
+    m_KeysDown[event.scancode] = 0;
+}
+
+bool Application::IsKeyDown(SDL_Scancode scancode)
+{
+    assert(scancode >= 0 && scancode <= m_KeysDown.size());
+    return m_KeysDown[scancode];
 }
