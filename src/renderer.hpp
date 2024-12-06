@@ -35,13 +35,20 @@ private:
     bool LoadAdapterSync();
     bool LoadDeviceSync();
 
-    wgpu::BindGroupLayout m_BindGroupLayout;
+    constexpr static int GROUP_MATERIAL_INDEX = 0;
+    constexpr static int GROUP_TRANSFORM_INDEX = 1;
+    std::array<wgpu::BindGroupLayout, 2> m_BindGroupLayouts;
     wgpu::PipelineLayout m_PipelineLayout;
 
     struct DrawData
     {
-        Buffer buffer;
-        wgpu::BindGroup bindGroup;
+        bool empty = true;
+
+        Buffer materialBuffer;
+        wgpu::BindGroup materialBindGroup;
+
+        Buffer transformBuffer;
+        wgpu::BindGroup transformBindGroup;
     };
     std::unordered_map<uint32_t, DrawData> m_EntityDrawData;
 };

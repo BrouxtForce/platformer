@@ -10,4 +10,6 @@ struct Transform
     Transform() = default;
     inline Transform(Math::float2 position, Math::float2 scale)
         : position(position), scale(scale) {}
+
+    Math::Matrix3x3 GetMatrix() const;
 };

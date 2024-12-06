@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 namespace Math
 {
     struct float2
@@ -21,6 +23,26 @@ namespace Math
         float2 operator/(const float2& other);
     };
 
+    struct float3
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float z = 0.0f;
+
+        float3() = default;
+
+        inline float3(float x, float y, float z)
+            : x(x), y(y), z(z) {}
+
+        inline float3(float scalar)
+            : x(scalar), y(scalar), z(scalar) {}
+
+        float3 operator+(const float3& other);
+        float3 operator-(const float3& other);
+        float3 operator*(const float3& other);
+        float3 operator/(const float3& other);
+    };
+
     struct Color
     {
         float r = 0.0f;
@@ -32,5 +54,16 @@ namespace Math
 
         inline Color(float r, float g, float b, float a = 1.0f)
             : r(r), g(g), b(b), a(a) {}
+    };
+
+    struct Matrix3x3
+    {
+        // Padded to 3 float4's to directly upload to WebGPU
+        std::array<std::array<float, 4>, 3> columns;
+
+        // Constucts the identity matrix
+        Matrix3x3();
+
+        Matrix3x3(float3 column0, float3 column1, float3 column2);
     };
 }

@@ -3,6 +3,7 @@
 #include <sdl3webgpu.h>
 #include <webgpu/webgpu.hpp>
 
+#include "math.hpp"
 #include "renderer.hpp"
 #include "utility.hpp"
 
@@ -44,6 +45,7 @@ bool Renderer::Init(SDL_Window* window)
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
     m_Surface.configure(surfaceConfig);
 
+    // Material bind group layout
     wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
     bindGroupLayoutEntry.binding = 0;
     bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
@@ -53,11 +55,19 @@ bool Renderer::Init(SDL_Window* window)
     wgpu::BindGroupLayoutDescriptor bindGroupLayoutDescriptor;
     bindGroupLayoutDescriptor.entryCount = 1;
     bindGroupLayoutDescriptor.entries = &bindGroupLayoutEntry;
-    m_BindGroupLayout = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+    m_BindGroupLayouts[GROUP_MATERIAL_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+
+    // Transform bind group layout
+    bindGroupLayoutEntry.binding = 0;
+    bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex;
+    bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Math::Matrix3x3);
+
+    m_BindGroupLayouts[GROUP_TRANSFORM_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
 
     wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor;
-    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
-    pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout;
+    pipelineLayoutDescriptor.bindGroupLayoutCount = m_BindGroupLayouts.size();
+    pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)m_BindGroupLayouts.data();
     m_PipelineLayout = m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
     std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", surfaceConfig.format);
@@ -122,25 +132,37 @@ bool Renderer::Render(Scene scene)
     for (const Entity& entity : scene.entities)
     {
         DrawData& drawData = m_EntityDrawData[entity.id];
-        if (drawData.buffer.IsEmpty())
+        if (drawData.empty)
         {
-            drawData.buffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+            drawData.empty = false;
+
+            drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+            drawData.transformBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
 
             wgpu::BindGroupEntry binding;
             binding.binding = 0;
-            binding.buffer = drawData.buffer.get();
+            binding.buffer = drawData.materialBuffer.get();
             binding.offset = 0;
             binding.size = sizeof(Material);
 
             wgpu::BindGroupDescriptor bindGroupDescriptor{};
-            bindGroupDescriptor.layout = m_BindGroupLayout;
+            bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_MATERIAL_INDEX];
             bindGroupDescriptor.entryCount = 1;
             bindGroupDescriptor.entries = &binding;
 
-            drawData.bindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+            drawData.materialBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+
+            bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
+            binding.buffer = drawData.transformBuffer.get();
+            binding.size = sizeof(Math::Matrix3x3);
+
+            drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
         }
-        drawData.buffer.Write(m_Queue, entity.material);
-        renderEncoder.setBindGroup(0, drawData.bindGroup, 0, nullptr);
+        Math::Matrix3x3 modelMatrix = entity.transform.GetMatrix();
+        drawData.materialBuffer.Write(m_Queue, entity.material);
+        drawData.transformBuffer.Write(m_Queue, modelMatrix);
+        renderEncoder.setBindGroup(0, drawData.materialBindGroup, 0, nullptr);
+        renderEncoder.setBindGroup(1, drawData.transformBindGroup, 0, nullptr);
         renderEncoder.draw(6, 1, 0, 0);
     }
     renderEncoder.end();

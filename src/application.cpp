@@ -28,7 +28,17 @@ bool Application::Init()
 
 bool Application::Loop()
 {
-    m_Scene.entities[0].material.color = Math::Color(SDL_randf(), SDL_randf(), SDL_randf(), 1);
+    static int frame = 0;
+    frame++;
+
+    float cos = SDL_cosf((float)frame / 60.0f);
+    float sin = SDL_sinf((float)frame / 60.0f);
+
+    Entity& entity = m_Scene.entities[0];
+    entity.material.color = Math::Color((cos + 1.0f) / 2.0f, (sin + 1.0f) / 2.0f, 0.0f, 1.0f);
+    entity.transform.position = Math::float2(cos, sin) * 0.5f;
+    entity.transform.scale = (cos + sin) * 0.25f;
+
     return m_Renderer.Render(m_Scene);
 }
 

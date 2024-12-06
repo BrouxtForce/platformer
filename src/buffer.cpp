@@ -59,10 +59,10 @@ Buffer::~Buffer()
     }
 }
 
-void Buffer::Write(wgpu::Queue queue, void* data, uint32_t size)
+void Buffer::Write(wgpu::Queue queue, void* data, uint32_t size, uint32_t offset)
 {
     assert(size <= m_Size);
-    queue.writeBuffer(m_Buffer, 0, data, size);
+    queue.writeBuffer(m_Buffer, offset, data, size);
 }
 
 bool Buffer::IsEmpty() const

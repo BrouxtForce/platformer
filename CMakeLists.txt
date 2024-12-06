@@ -9,6 +9,7 @@ add_executable(game
     src/math.cpp
     src/renderer.cpp
     src/scene.cpp
+    src/transform.cpp
     src/utility.cpp
 )
 target_include_directories(game PUBLIC

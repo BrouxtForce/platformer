@@ -17,12 +17,12 @@ public:
 
     ~Buffer();
 
-    void Write(wgpu::Queue queue, void* data, uint32_t size);
+    void Write(wgpu::Queue queue, void* data, uint32_t size, uint32_t offset = 0);
 
     template<typename T>
-    void Write(wgpu::Queue queue, const T& data)
+    void Write(wgpu::Queue queue, const T& data, uint32_t offset = 0)
     {
-        Write(queue, (void*)&data, sizeof(T));
+        Write(queue, (void*)&data, sizeof(T), offset);
     }
 
     bool IsEmpty() const;
