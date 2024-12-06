@@ -29,14 +29,13 @@ bool Renderer::Init(SDL_Window* window)
 
     m_Queue = m_Device.getQueue();
 
-    int windowWidth, windowHeight;
-    SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+    SDL_GetWindowSize(window, &m_Width, &m_Height);
 
     wgpu::SurfaceConfiguration surfaceConfig;
     surfaceConfig.format = m_Surface.getPreferredFormat(m_Adapter);
     surfaceConfig.nextInChain = nullptr;
-    surfaceConfig.width = windowWidth;
-    surfaceConfig.height = windowHeight;
+    surfaceConfig.width = m_Width;
+    surfaceConfig.height = m_Height;
     surfaceConfig.viewFormatCount = 0;
     surfaceConfig.viewFormats = nullptr;
     surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
@@ -64,7 +63,24 @@ bool Renderer::Init(SDL_Window* window)
     bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Math::Matrix3x3);
 
     m_BindGroupLayouts[GROUP_TRANSFORM_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+    m_BindGroupLayouts[GROUP_CAMERA_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
 
+    m_CameraBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+
+    wgpu::BindGroupEntry cameraBindGroupEntry;
+    cameraBindGroupEntry.binding = 0;
+    cameraBindGroupEntry.buffer = m_CameraBuffer.get();
+    cameraBindGroupEntry.offset = 0;
+    cameraBindGroupEntry.size = sizeof(Math::Matrix3x3);
+
+    wgpu::BindGroupDescriptor cameraBindGroupDescriptor{};
+    cameraBindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_CAMERA_INDEX];
+    cameraBindGroupDescriptor.entryCount = 1;
+    cameraBindGroupDescriptor.entries = &cameraBindGroupEntry;
+
+    m_CameraBindGroup = m_Device.createBindGroup(cameraBindGroupDescriptor);
+
+    // Pipeline layout
     wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor;
     pipelineLayoutDescriptor.bindGroupLayoutCount = m_BindGroupLayouts.size();
     pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)m_BindGroupLayouts.data();
@@ -80,7 +96,7 @@ bool Renderer::Init(SDL_Window* window)
     return true;
 }
 
-bool Renderer::Render(Scene scene)
+bool Renderer::Render(const Scene& scene, const Camera& camera)
 {
     wgpu::TextureView textureView;
     {
@@ -129,6 +145,11 @@ bool Renderer::Render(Scene scene)
 
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     renderEncoder.setPipeline(quadRenderPipeline);
+
+    Math::Matrix3x3 viewMatrix = camera.GetMatrix();
+    m_CameraBuffer.Write(m_Queue, viewMatrix);
+    renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
+
     for (const Entity& entity : scene.entities)
     {
         DrawData& drawData = m_EntityDrawData[entity.id];

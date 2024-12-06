@@ -45,7 +45,8 @@ bool Application::Loop()
     constexpr float speed = 0.02f;
     entity.transform.position += movement * speed;
 
-    return m_Renderer.Render(m_Scene);
+    m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
+    return m_Renderer.Render(m_Scene, m_Camera);
 }
 
 void Application::Exit()

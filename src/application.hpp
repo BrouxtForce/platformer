@@ -29,6 +29,7 @@ private:
     Renderer m_Renderer;
 
     Scene m_Scene;
+    Camera m_Camera;
 
     std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
 };

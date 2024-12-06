@@ -5,6 +5,7 @@ project(Platformer)
 add_executable(game
     src/application.cpp
     src/buffer.cpp
+    src/camera.cpp
     src/main.cpp
     src/math.cpp
     src/renderer.cpp
