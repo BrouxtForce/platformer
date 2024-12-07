@@ -1,11 +1,13 @@
 #include "scene.hpp"
 
-int Scene::CreateEntity()
+#include <cassert>
+
+Entity* Scene::CreateEntity()
 {
-    static uint16_t nextId = 0;
+    static uint16_t nextId = 1;
     Entity entity {
-        .id = nextId
+        .id = nextId++
     };
-    entities.push_back(entity);
-    return entities.size() - 1;
+    assert(!m_EntityMap.contains(entity.id));
+    return &m_EntityMap.insert({ entity.id, entity }).first->second;
 }

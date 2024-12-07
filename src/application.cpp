@@ -4,6 +4,8 @@
 #include <emscripten.h>
 #endif
 
+#include "physics.hpp"
+
 bool Application::Init()
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -21,17 +23,32 @@ bool Application::Init()
         return false;
     }
 
-    m_Scene.CreateEntity();
+    m_PlayerEntity = m_Scene.CreateEntity();
+    m_PlayerEntity->material.color = Math::Color(0, 0, 1, 1);
+    m_PlayerEntity->transform.scale = Math::float2(0.1, 0.15);
+    m_PlayerEntity->shape = Shape::Ellipse;
+
+    Entity* colliderEntityA = m_Scene.CreateEntity();
+    colliderEntityA->transform = Transform(
+        Math::float2(-0.5f, -0.5f),
+        Math::float2(0.2f, 0.2f)
+    );
+    colliderEntityA->material.color = Math::Color(0, 0, 0, 1);
+    colliderEntityA->flags |= (uint16_t)EntityFlags::Collider;
+
+    Entity* colliderEntityB = m_Scene.CreateEntity();
+    colliderEntityB->transform = Transform(
+        Math::float2(0.5f, 0.4f),
+        Math::float2(0.4f, 0.1f)
+    );
+    colliderEntityB->material.color = Math::Color(0, 0, 0, 1);
+    colliderEntityB->flags |= (uint16_t)EntityFlags::Collider;
 
     return true;
 }
 
 bool Application::Loop()
 {
-    Entity& entity = m_Scene.entities[0];
-    entity.material.color = Math::Color(0, 0, 1, 1);
-    entity.transform.scale = Math::float2(0.1, 0.1);
-
     Math::float2 movement = 0.0f;
     if (IsKeyDown(SDL_SCANCODE_W)) movement.y += 1.0f;
     if (IsKeyDown(SDL_SCANCODE_A)) movement.x -= 1.0f;
@@ -41,9 +58,8 @@ bool Application::Loop()
     {
         movement = Math::Normalize(movement);
     }
-
     constexpr float speed = 0.02f;
-    entity.transform.position += movement * speed;
+    m_PlayerEntity->transform.position += Physics::CollideAndSlide(m_Scene, m_PlayerEntity->transform, movement * speed);
 
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
     return m_Renderer.Render(m_Scene, m_Camera);

@@ -36,6 +36,7 @@ private:
     wgpu::Surface m_Surface;
 
     wgpu::RenderPipeline quadRenderPipeline;
+    wgpu::RenderPipeline ellipseRenderPipeline;
 
     std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
 

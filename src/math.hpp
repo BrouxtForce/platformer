@@ -26,7 +26,14 @@ namespace Math
         float2& operator-=(const float2& other);
         float2& operator*=(const float2& other);
         float2& operator/=(const float2& other);
+
+        float& operator[](int index);
     };
+
+    float2 operator+(const float2& left, const float2& right);
+    float2 operator-(const float2& left, const float2& right);
+    float2 operator*(const float2& left, const float2& right);
+    float2 operator/(const float2& left, const float2& right);
 
     struct float3
     {
@@ -72,5 +79,11 @@ namespace Math
         Matrix3x3(float3 column0, float3 column1, float3 column2);
     };
 
+    float Length(float2 in);
+    float LengthSquared(float2 in);
+    float Dot(float2 a, float2 b);
     float2 Normalize(float2 in);
+
+    // Returns true if successful
+    bool SolveQuadratic(float a, float b, float c, float2& result);
 }

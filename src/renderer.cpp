@@ -93,6 +93,13 @@ bool Renderer::Init(SDL_Window* window)
     }
     quadRenderPipeline = renderPipeline.value();
 
+    renderPipeline = CreateRenderPipeline("ellipse", surfaceConfig.format);
+    if (!renderPipeline.has_value())
+    {
+        return false;
+    }
+    ellipseRenderPipeline = renderPipeline.value();
+
     return true;
 }
 
@@ -144,13 +151,12 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     renderPassDescriptor.timestampWrites = nullptr;
 
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-    renderEncoder.setPipeline(quadRenderPipeline);
 
     Math::Matrix3x3 viewMatrix = camera.GetMatrix();
     m_CameraBuffer.Write(m_Queue, viewMatrix);
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
-    for (const Entity& entity : scene.entities)
+    for (const auto& [_, entity] : scene.GetEntityMap())
     {
         DrawData& drawData = m_EntityDrawData[entity.id];
         if (drawData.empty)
@@ -184,6 +190,19 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         drawData.transformBuffer.Write(m_Queue, modelMatrix);
         renderEncoder.setBindGroup(0, drawData.materialBindGroup, 0, nullptr);
         renderEncoder.setBindGroup(1, drawData.transformBindGroup, 0, nullptr);
+
+        switch (entity.shape)
+        {
+            case Shape::Rectangle:
+                renderEncoder.setPipeline(quadRenderPipeline);
+                break;
+            case Shape::Ellipse:
+                renderEncoder.setPipeline(ellipseRenderPipeline);
+                break;
+            default:
+                assert(false);
+        }
+
         renderEncoder.draw(6, 1, 0, 0);
     }
     renderEncoder.end();
@@ -204,10 +223,9 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const std::string fragmentEntry = shader + "_frag";
 
     // TODO: SDL_free
-    static std::string basePath = SDL_GetBasePath();
+    static const std::string basePath = SDL_GetBasePath();
 #if __EMSCRIPTEN__
-    // const std::string shaderPath = basePath + "shaders/" + shader + ".wgsl";
-    const std::string shaderPath = "shaders/quad.wgsl";
+    const std::string shaderPath = basePath + "shaders/" + shader + ".wgsl";
 #else
     const std::string shaderPath = basePath + "../shaders/" + shader + ".wgsl";
 #endif
@@ -232,7 +250,8 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     wgpu::ShaderModule shaderModule = m_Device.createShaderModule(shaderModuleDescriptor);
 
     wgpu::RenderPipelineDescriptor pipelineDescriptor;
-    pipelineDescriptor.label = "Quad pipeline";
+    const std::string pipelineName = shader + " Render Pipeline";
+    pipelineDescriptor.label = pipelineName.c_str();
 
     pipelineDescriptor.vertex.bufferCount = 0;
     pipelineDescriptor.vertex.buffers = nullptr;

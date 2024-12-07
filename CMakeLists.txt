@@ -8,6 +8,7 @@ add_executable(game
     src/camera.cpp
     src/main.cpp
     src/math.cpp
+    src/physics.cpp
     src/renderer.cpp
     src/scene.cpp
     src/transform.cpp

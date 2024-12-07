@@ -32,4 +32,6 @@ private:
     Camera m_Camera;
 
     std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
+
+    Entity* m_PlayerEntity = nullptr;
 };

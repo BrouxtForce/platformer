@@ -1,5 +1,7 @@
 #include "math.hpp"
 
+#include <cassert>
+
 namespace Math
 {
     float2 float2::operator+(const float2& other)
@@ -50,6 +52,37 @@ namespace Math
         return *this;
     }
 
+    float& float2::operator[](int index)
+    {
+        switch (index)
+        {
+            case 0: return x;
+            case 1: return y;
+        }
+        assert(false);
+        return x;
+    }
+
+    float2 operator+(const float2& left, const float2& right)
+    {
+        return float2(left.x + right.x, left.y + right.y);
+    }
+
+    float2 operator-(const float2& left, const float2& right)
+    {
+        return float2(left.x - right.x, left.y - right.y);
+    }
+
+    float2 operator*(const float2& left, const float2& right)
+    {
+        return float2(left.x * right.x, left.y * right.y);
+    }
+
+    float2 operator/(const float2& left, const float2& right)
+    {
+        return float2(left.x / right.x, left.y / right.y);
+    }
+
     float3 float3::operator+(const float3& other)
     {
         return float3(x + other.x, y + other.y, z + other.z);
@@ -88,9 +121,40 @@ namespace Math
         };
     }
 
+    float Length(float2 in)
+    {
+        return std::hypot(in.x, in.y);
+    }
+
+    float LengthSquared(float2 in)
+    {
+        return in.x * in.x + in.y * in.y;
+    }
+
+    float Dot(float2 a, float2 b)
+    {
+        return a.x * b.x + a.y * b.y;
+    }
+
     float2 Normalize(float2 in)
     {
         float magnitude = std::hypot(in.x, in.y);
         return float2(in.x / magnitude, in.y / magnitude);
+    }
+
+    bool SolveQuadratic(float a, float b, float c, float2& result)
+    {
+        float discriminant = b*b - 4*a*c;
+        if (discriminant < 0.0f)
+        {
+            return false;
+        }
+        float sqrtDiscriminant = std::sqrt(discriminant);
+        float temp = 1.0f / (2.0f * a);
+        result = float2(
+            (-b + sqrtDiscriminant) * temp,
+            (-b - sqrtDiscriminant) * temp
+        );
+        return true;
     }
 }
