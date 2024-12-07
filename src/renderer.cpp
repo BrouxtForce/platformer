@@ -125,10 +125,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         viewDescriptor.arrayLayerCount = 1;
         viewDescriptor.aspect = WGPUTextureAspect_All;
         textureView = wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
-
-#ifndef WEBGPU_BACKEND_WGPU
         wgpuTextureRelease(surfaceTexture.texture);
-#endif
     }
 
     wgpu::CommandEncoder commandEncoder = m_Device.createCommandEncoder();
@@ -206,13 +203,18 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         renderEncoder.draw(6, 1, 0, 0);
     }
     renderEncoder.end();
+    renderEncoder.release();
 
     wgpu::CommandBuffer commandBuffer = commandEncoder.finish();
     m_Queue.submit(1, &commandBuffer);
+    commandEncoder.release();
+    commandBuffer.release();
 
 #ifndef __EMSCRIPTEN__
     m_Surface.present();
 #endif
+
+    textureView.release();
 
     return true;
 }

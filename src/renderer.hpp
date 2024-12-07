@@ -15,6 +15,9 @@ class Renderer
 public:
     Renderer() = default;
 
+    Renderer(const Renderer&) = delete;
+    Renderer& operator=(const Renderer&) = delete;
+
     bool Init(SDL_Window* window);
     bool Render(const Scene& scene, const Camera& camera);
 
