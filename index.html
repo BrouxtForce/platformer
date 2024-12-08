@@ -3,28 +3,25 @@
         <meta charset="utf-8" />
         <title>Platformer</title>
         <style>
-            html {
-                margin: 0px;
-            }
-            .game-canvas {
+            #canvas {
                 position: absolute;
                 left: 50%;
                 top: 50%;
                 transform: translate(-50%, -50%);
+                width: 100%;
+                height: 100%;
             }
         </style>
     </head>
 
     <body>
-        <canvas class="game-canvas"></canvas>
+        <canvas id="canvas"></canvas>
 
         <script type="text/javascript">
             var Module = {
                 preRun: [],
                 postRun: [],
-                canvas: (function () {
-                    return document.querySelector(".game-canvas");
-                })(),
+                canvas: document.getElementById("canvas"),
             };
         </script>
         <script async type="text/javascript" src="build/web/game.js"></script>

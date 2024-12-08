@@ -6,6 +6,7 @@ add_executable(game
     src/application.cpp
     src/buffer.cpp
     src/camera.cpp
+    src/log.cpp
     src/main.cpp
     src/math.cpp
     src/physics.cpp

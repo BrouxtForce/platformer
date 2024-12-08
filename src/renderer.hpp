@@ -21,6 +21,8 @@ public:
     bool Init(SDL_Window* window);
     bool Render(const Scene& scene, const Camera& camera);
 
+    void Resize();
+
     inline int GetWidth()  { return m_Width; }
     inline int GetHeight() { return m_Height; }
 
@@ -37,6 +39,8 @@ private:
     wgpu::Device m_Device;
     wgpu::Queue m_Queue;
     wgpu::Surface m_Surface;
+
+    wgpu::TextureFormat m_Format = wgpu::TextureFormat::Undefined;
 
     wgpu::RenderPipeline quadRenderPipeline;
     wgpu::RenderPipeline ellipseRenderPipeline;

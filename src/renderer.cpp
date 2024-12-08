@@ -1,11 +1,10 @@
-#include <stdio.h>
-
 #include <sdl3webgpu.h>
 #include <webgpu/webgpu.hpp>
 
 #include "math.hpp"
 #include "renderer.hpp"
 #include "utility.hpp"
+#include "log.hpp"
 
 bool Renderer::Init(SDL_Window* window)
 {
@@ -19,7 +18,7 @@ bool Renderer::Init(SDL_Window* window)
     #endif
 
     if (!m_Instance) {
-        printf("Failed to create WebGPU instance.");
+        Log::Error("Failed to create WebGPU instance.");
         return false;
     }
 
@@ -29,20 +28,8 @@ bool Renderer::Init(SDL_Window* window)
 
     m_Queue = m_Device.getQueue();
 
-    SDL_GetWindowSize(window, &m_Width, &m_Height);
-
-    wgpu::SurfaceConfiguration surfaceConfig;
-    surfaceConfig.format = m_Surface.getPreferredFormat(m_Adapter);
-    surfaceConfig.nextInChain = nullptr;
-    surfaceConfig.width = m_Width;
-    surfaceConfig.height = m_Height;
-    surfaceConfig.viewFormatCount = 0;
-    surfaceConfig.viewFormats = nullptr;
-    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
-    surfaceConfig.device = m_Device;
-    surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
-    surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
-    m_Surface.configure(surfaceConfig);
+    m_Format = m_Surface.getPreferredFormat(m_Adapter);
+    Resize();
 
     // Material bind group layout
     wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
@@ -86,14 +73,14 @@ bool Renderer::Init(SDL_Window* window)
     pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)m_BindGroupLayouts.data();
     m_PipelineLayout = m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
-    std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", surfaceConfig.format);
+    std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", m_Format);
     if (!renderPipeline.has_value())
     {
         return false;
     }
     quadRenderPipeline = renderPipeline.value();
 
-    renderPipeline = CreateRenderPipeline("ellipse", surfaceConfig.format);
+    renderPipeline = CreateRenderPipeline("ellipse", m_Format);
     if (!renderPipeline.has_value())
     {
         return false;
@@ -158,6 +145,8 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         DrawData& drawData = m_EntityDrawData[entity.id];
         if (drawData.empty)
         {
+            Log::Debug("Create entity draw data (" + std::to_string(entity.id) + ")");
+
             drawData.empty = false;
 
             drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
@@ -219,6 +208,33 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     return true;
 }
 
+void Renderer::Resize()
+{
+    int newWidth, newHeight;
+    SDL_GetWindowSize(m_Window, &newWidth, &newHeight);
+    if (m_Width == newWidth && m_Height == newHeight)
+    {
+        return;
+    }
+    m_Width = newWidth;
+    m_Height = newHeight;
+
+    Log::Debug("Resized window: " + std::to_string(m_Width) + ", " + std::to_string(m_Height));
+
+    wgpu::SurfaceConfiguration surfaceConfig;
+    surfaceConfig.format = m_Format;
+    surfaceConfig.nextInChain = nullptr;
+    surfaceConfig.width = m_Width;
+    surfaceConfig.height = m_Height;
+    surfaceConfig.viewFormatCount = 0;
+    surfaceConfig.viewFormats = nullptr;
+    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    surfaceConfig.device = m_Device;
+    surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
+    surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
+    m_Surface.configure(surfaceConfig);
+}
+
 std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, wgpu::TextureFormat format)
 {
     const std::string vertexEntry = shader + "_vert";
@@ -234,7 +250,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const std::string shaderSource = ReadFile(shaderPath);
     if (shaderSource.empty())
     {
-        printf("Failed to load shader '%s'\n", shaderPath.c_str());
+        Log::Error("Failed to load shader '" + (std::string)shaderPath.c_str() + "'");
         return std::nullopt;
     }
 
@@ -319,7 +335,7 @@ bool Renderer::LoadAdapterSync()
     assert(requestEnded);
     if (!requestSucceeded)
     {
-        printf("Failed to get WebGPU adapter.");
+        Log::Error("Failed to get WebGPU adapter.");
         return false;
     }
     return true;
@@ -335,10 +351,10 @@ bool Renderer::LoadDeviceSync()
     descriptor.defaultQueue.nextInChain = nullptr;
     descriptor.defaultQueue.label = "Default Queue";
     descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason, const char* message, void* /* userData */) {
-        printf("Device lost: reason %i\n", (int)reason);
+        Log::Error("Device lost: reason " + std::to_string(reason));
         if (message)
         {
-            printf("%s\n", message);
+            Log::Error(message);
         }
     };
     bool requestEnded = false;
@@ -362,15 +378,15 @@ bool Renderer::LoadDeviceSync()
     assert(requestEnded);
     if (!requestSucceeded)
     {
-        printf("Failed to get WebGPU device.");
+        Log::Error("Failed to get WebGPU device.");
         return false;
     }
 
     uncapturedErrorHandle = m_Device.setUncapturedErrorCallback([](wgpu::ErrorType type, const char* message) {
-        printf("Uncaptured device error: type %i\n", (int)type);
+        Log::Error("Uncaptured device error: type " + std::to_string(type));
         if (message)
         {
-            printf("%s\n", message);
+            Log::Error(message);
         }
     });
 

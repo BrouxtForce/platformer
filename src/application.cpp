@@ -5,6 +5,7 @@
 #endif
 
 #include "physics.hpp"
+#include "log.hpp"
 
 bool Application::Init()
 {
@@ -13,13 +14,15 @@ bool Application::Init()
         return false;
     }
 
-    m_Window = SDL_CreateWindow("", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    m_Window = SDL_CreateWindow("", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED);
     if (m_Window == nullptr)
     {
+        Log::Error("Failed to create window");
         return false;
     }
     if (!m_Renderer.Init(m_Window))
     {
+        Log::Error("Failed to initialize renderer");
         return false;
     }
 
@@ -61,6 +64,7 @@ bool Application::Loop()
     constexpr float speed = 0.02f;
     m_PlayerEntity->transform.position += Physics::CollideAndSlide(m_Scene, m_PlayerEntity->transform, movement * speed);
 
+    m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
     return m_Renderer.Render(m_Scene, m_Camera);
 }
