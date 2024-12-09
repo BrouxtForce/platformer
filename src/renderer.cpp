@@ -6,6 +6,8 @@
 #include "utility.hpp"
 #include "log.hpp"
 
+wgpu::TextureFormat Renderer::m_DepthStencilFormat = wgpu::TextureFormat::Depth16Unorm;
+
 bool Renderer::Init(SDL_Window* window)
 {
     m_Window = window;
@@ -47,9 +49,11 @@ bool Renderer::Init(SDL_Window* window)
     bindGroupLayoutEntry.binding = 0;
     bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex;
     bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Math::Matrix3x3);
+    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(TransformBindGroupData);
 
     m_BindGroupLayouts[GROUP_TRANSFORM_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+
+    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Math::Matrix3x3);
     m_BindGroupLayouts[GROUP_CAMERA_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
 
     m_CameraBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
@@ -122,16 +126,24 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     renderPassColorAttachment.resolveTarget = nullptr;
     renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
     renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
-    renderPassColorAttachment.clearValue = wgpu::Color{ 1.0, 0.0, 0.0, 1.0 };
+    Math::Color clearColor = scene.properties.backgroundColor;
+    renderPassColorAttachment.clearValue = wgpu::Color{ clearColor.r, clearColor.g, clearColor.b, clearColor.a };
 #ifndef WEBGPU_BACKEND_WGPU
     renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
+
+    wgpu::RenderPassDepthStencilAttachment renderPassDepthStencilAttachment = wgpu::Default;
+    renderPassDepthStencilAttachment.view = m_DepthTextureView;
+    renderPassDepthStencilAttachment.depthClearValue = 0.0f;
+    renderPassDepthStencilAttachment.depthLoadOp = wgpu::LoadOp::Clear;
+    renderPassDepthStencilAttachment.depthStoreOp = wgpu::StoreOp::Store;
+    renderPassDepthStencilAttachment.depthReadOnly = false;
 
     wgpu::RenderPassDescriptor renderPassDescriptor;
     renderPassDescriptor.nextInChain = nullptr;
     renderPassDescriptor.colorAttachmentCount = 1;
     renderPassDescriptor.colorAttachments = &renderPassColorAttachment;
-    renderPassDescriptor.depthStencilAttachment = nullptr;
+    renderPassDescriptor.depthStencilAttachment = &renderPassDepthStencilAttachment;
     renderPassDescriptor.timestampWrites = nullptr;
 
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
@@ -150,7 +162,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             drawData.empty = false;
 
             drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
-            drawData.transformBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+            drawData.transformBuffer = Buffer(m_Device, sizeof(TransformBindGroupData), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
 
             wgpu::BindGroupEntry binding;
             binding.binding = 0;
@@ -167,15 +179,18 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
             bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
             binding.buffer = drawData.transformBuffer.get();
-            binding.size = sizeof(Math::Matrix3x3);
+            binding.size = sizeof(TransformBindGroupData);
 
             drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
         }
-        Math::Matrix3x3 modelMatrix = entity.transform.GetMatrix();
+        TransformBindGroupData transformData {
+            .transform = entity.transform.GetMatrix(),
+            .zIndex = entity.zIndex
+        };
         drawData.materialBuffer.Write(m_Queue, entity.material);
-        drawData.transformBuffer.Write(m_Queue, modelMatrix);
-        renderEncoder.setBindGroup(0, drawData.materialBindGroup, 0, nullptr);
-        renderEncoder.setBindGroup(1, drawData.transformBindGroup, 0, nullptr);
+        drawData.transformBuffer.Write(m_Queue, transformData);
+        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
+        renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
         switch (entity.shape)
         {
@@ -233,6 +248,36 @@ void Renderer::Resize()
     surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
     m_Surface.configure(surfaceConfig);
+
+    if (m_DepthTexture != nullptr)
+    {
+        m_DepthTextureView.release();
+        m_DepthTexture.destroy();
+        m_DepthTexture.release();
+    }
+
+    wgpu::TextureDescriptor depthTextureDescriptor;
+    depthTextureDescriptor.dimension = wgpu::TextureDimension::_2D;
+    depthTextureDescriptor.format = m_DepthStencilFormat;
+    depthTextureDescriptor.mipLevelCount = 1;
+    depthTextureDescriptor.sampleCount = 1;
+    depthTextureDescriptor.size.width = m_Width;
+    depthTextureDescriptor.size.height = m_Height;
+    depthTextureDescriptor.size.depthOrArrayLayers = 1;
+    depthTextureDescriptor.usage = wgpu::TextureUsage::RenderAttachment;
+    depthTextureDescriptor.viewFormatCount = 1;
+    depthTextureDescriptor.viewFormats = (WGPUTextureFormat*)&m_DepthStencilFormat;
+    m_DepthTexture = m_Device.createTexture(depthTextureDescriptor);
+
+    wgpu::TextureViewDescriptor depthTextureViewDescriptor;
+    depthTextureViewDescriptor.aspect = wgpu::TextureAspect::DepthOnly;
+    depthTextureViewDescriptor.baseArrayLayer = 0;
+    depthTextureViewDescriptor.arrayLayerCount = 1;
+    depthTextureViewDescriptor.baseMipLevel = 0;
+    depthTextureViewDescriptor.mipLevelCount = 1;
+    depthTextureViewDescriptor.dimension = wgpu::TextureViewDimension::_2D;
+    depthTextureViewDescriptor.format = m_DepthStencilFormat;
+    m_DepthTextureView = m_DepthTexture.createView(depthTextureViewDescriptor);
 }
 
 std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, wgpu::TextureFormat format)
@@ -291,8 +336,15 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     fragmentState.targetCount = 1;
     fragmentState.targets = &colorTarget;
 
+    wgpu::DepthStencilState depthStencilState = wgpu::Default;
+    depthStencilState.depthCompare = wgpu::CompareFunction::Greater;
+    depthStencilState.depthWriteEnabled = true;
+    depthStencilState.format = m_DepthStencilFormat;
+    depthStencilState.stencilReadMask = 0;
+    depthStencilState.stencilWriteMask = 0;
+
     pipelineDescriptor.fragment = &fragmentState;
-    pipelineDescriptor.depthStencil = nullptr;
+    pipelineDescriptor.depthStencil = &depthStencilState;
 
     pipelineDescriptor.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
     pipelineDescriptor.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;

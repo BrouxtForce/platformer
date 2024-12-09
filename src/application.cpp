@@ -26,26 +26,12 @@ bool Application::Init()
         return false;
     }
 
+    m_Scene.Load(Scene::City);
+
     m_PlayerEntity = m_Scene.CreateEntity();
-    m_PlayerEntity->material.color = Math::Color(0, 0, 1, 1);
+    m_PlayerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
     m_PlayerEntity->transform.scale = Math::float2(0.1, 0.15);
     m_PlayerEntity->shape = Shape::Ellipse;
-
-    Entity* colliderEntityA = m_Scene.CreateEntity();
-    colliderEntityA->transform = Transform(
-        Math::float2(-0.5f, -0.5f),
-        Math::float2(0.2f, 0.2f)
-    );
-    colliderEntityA->material.color = Math::Color(0, 0, 0, 1);
-    colliderEntityA->flags |= (uint16_t)EntityFlags::Collider;
-
-    Entity* colliderEntityB = m_Scene.CreateEntity();
-    colliderEntityB->transform = Transform(
-        Math::float2(0.5f, 0.4f),
-        Math::float2(0.4f, 0.1f)
-    );
-    colliderEntityB->material.color = Math::Color(0, 0, 0, 1);
-    colliderEntityB->flags |= (uint16_t)EntityFlags::Collider;
 
     return true;
 }

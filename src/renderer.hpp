@@ -50,11 +50,22 @@ private:
     bool LoadAdapterSync();
     bool LoadDeviceSync();
 
+    struct TransformBindGroupData
+    {
+        Math::Matrix3x3 transform;
+        uint32_t zIndex;
+        uint32_t padding[3] {};
+    };
+
     constexpr static int GROUP_MATERIAL_INDEX = 0;
     constexpr static int GROUP_TRANSFORM_INDEX = 1;
     constexpr static int GROUP_CAMERA_INDEX = 2;
     std::array<wgpu::BindGroupLayout, 3> m_BindGroupLayouts;
     wgpu::PipelineLayout m_PipelineLayout;
+
+    static wgpu::TextureFormat m_DepthStencilFormat;
+    wgpu::Texture m_DepthTexture;
+    wgpu::TextureView m_DepthTextureView;
 
     struct DrawData
     {

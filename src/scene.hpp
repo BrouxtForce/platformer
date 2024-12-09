@@ -24,8 +24,9 @@ enum class EntityFlags : uint16_t
 
 struct Entity
 {
-    uint16_t id = 0;
+    uint16_t id = 1;
     uint16_t flags = 0;
+    uint16_t zIndex = 0;
     Transform transform{};
     Material material{};
     Shape shape = Shape::Rectangle;
@@ -34,6 +35,13 @@ struct Entity
 class Scene
 {
 public:
+    struct Properties
+    {
+        Math::Color backgroundColor;
+    };
+
+    Properties properties;
+
     Scene() = default;
 
     Entity* CreateEntity();
@@ -42,6 +50,9 @@ public:
     {
         return m_EntityMap;
     }
+
+    constexpr static int City = 0;
+    void Load(int index);
 
 private:
     std::unordered_map<uint32_t, Entity> m_EntityMap;
