@@ -15,11 +15,17 @@ Entity* Scene::CreateEntity()
     return &m_EntityMap.insert({ entity.id, entity }).first->second;
 }
 
+struct Collider
+{
+    Transform transform;
+    Shape shape;
+};
+
 struct SceneDescription
 {
     std::string name;
     Math::Color backgroundColor;
-    std::vector<Transform> colliders;
+    std::vector<Collider> colliders;
     uint64_t seed;
 };
 
@@ -28,8 +34,9 @@ static std::array<SceneDescription, 1> s_SceneDescriptions = {
         .name = "City",
         .backgroundColor = Math::Color(0.1, 0.1, 0.1),
         .colliders = {
-            Transform(Math::float2(-0.5f, -0.5f), Math::float2(0.2f, 0.2f)),
-            Transform(Math::float2(0.5f, 0.4f), Math::float2(0.4f, 0.1f))
+            { Transform(Math::float2(-1.0f, -0.25f), Math::float2(1.0f, 0.25f)), Shape::Rectangle },
+            { Transform(Math::float2(0.0f, -0.5f),    Math::float2(0.5f)       ), Shape::Ellipse },
+            { Transform(Math::float2(0.25f, -1.0f),  Math::float2(0.25f, 0.5f)), Shape::Rectangle },
         },
         .seed = 892542184
     }
@@ -44,13 +51,13 @@ void Scene::Load(int index)
 
     properties.backgroundColor = description.backgroundColor;
 
-    for (const Transform& colliderTransform : description.colliders)
+    for (const Collider& collider : description.colliders)
     {
         Entity* entity = CreateEntity();
-        entity->transform = colliderTransform;
+        entity->transform = collider.transform;
         entity->flags = (uint16_t)EntityFlags::Collider;
         entity->material.color = Math::Color(0.2, 0.2, 0.2);
-        entity->shape = Shape::Rectangle;
+        entity->shape = collider.shape;
 
         entity->zIndex = 2;
     }

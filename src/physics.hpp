@@ -25,4 +25,5 @@ namespace Physics
     CollisionData CirclePointCollision(Math::float2 circlePosition, Math::float2 velocity, Math::float2 point);
     CollisionData CircleLineCollision(Math::float2 circlePosition, Math::float2 velocity, const Line& line);
     CollisionData EllipseRectCollision(Transform ellipse, Math::float2 velocity, Transform rect);
+    CollisionData CircleCircleCollision(const Transform& circle, Math::float2 velocity, const Transform& other);
 }

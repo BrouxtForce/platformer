@@ -45,7 +45,8 @@ namespace Physics
                     collision = EllipseRectCollision(ellipse, velocity, entity.transform);
                     break;
                 case Shape::Ellipse:
-                    continue;
+                    collision = CircleCircleCollision(ellipse, velocity, entity.transform);
+                    break;
             }
             if (!collision.collided)
             {
@@ -176,5 +177,45 @@ namespace Physics
         minCollision.normal = Math::Normalize(minCollision.normal / ellipse.scale);
 
         return minCollision;
+    }
+
+    CollisionData CircleCircleCollision(const Transform& circle, Math::float2 velocity, const Transform& other)
+    {
+        const float circleRadius = circle.scale.x;
+        const float otherRadius = other.scale.x;
+
+        float targetDist = circleRadius + otherRadius;
+
+        float a = Math::LengthSquared(velocity);
+        float b = Math::Dot(2 * velocity, circle.position - other.position);
+        float c = Math::LengthSquared(circle.position - other.position) - targetDist * targetDist;
+
+        Math::float2 solutions;
+        if (!Math::SolveQuadratic(a, b, c, solutions))
+        {
+            return { .collided = false };
+        }
+
+        float t = INFINITY;
+        for (int i = 0; i < 2; i++)
+        {
+            if (solutions[i] >= 0.0f && solutions[i] <= 1.0f)
+            {
+                t = std::min(solutions[i], t);
+            }
+        }
+
+        if (t == INFINITY)
+        {
+            return { .collided = false };
+        }
+
+        Math::float2 normal = Math::Normalize(circle.position + velocity * t - other.position);
+        return CollisionData {
+            .collided = true,
+            .contactPoint = other.position - normal * otherRadius,
+            .normal = normal,
+            .t = t
+        };
     }
 }

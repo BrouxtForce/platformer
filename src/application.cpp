@@ -30,7 +30,8 @@ bool Application::Init()
 
     m_PlayerEntity = m_Scene.CreateEntity();
     m_PlayerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
-    m_PlayerEntity->transform.scale = Math::float2(0.1, 0.15);
+    m_PlayerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
+    m_PlayerEntity->transform.scale = Math::float2(0.1);
     m_PlayerEntity->shape = Shape::Ellipse;
 
     return true;
