@@ -92,4 +92,7 @@ namespace Math
 
     // Returns true if successful
     bool SolveQuadratic(float a, float b, float c, float2& result);
+
+    float LerpSmooth(float a, float b, float deltaTime, float halfLifeSeconds);
+    float2 LerpSmooth(float2 a, float2 b, float deltaTime, float halfLifeSeconds);
 }

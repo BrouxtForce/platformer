@@ -172,4 +172,17 @@ namespace Math
         );
         return true;
     }
+
+    float LerpSmooth(float a, float b, float deltaTime, float halfLifeSeconds)
+    {
+        return b + (a - b) * std::exp2(-deltaTime / halfLifeSeconds);
+    }
+
+    float2 LerpSmooth(float2 a, float2 b, float deltaTime, float halfLifeSeconds)
+    {
+        return float2(
+            LerpSmooth(a.x, b.x, deltaTime, halfLifeSeconds),
+            LerpSmooth(a.y, b.y, deltaTime, halfLifeSeconds)
+        );
+    }
 }

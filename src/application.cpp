@@ -38,7 +38,7 @@ bool Application::Init()
     return true;
 }
 
-bool Application::Loop()
+bool Application::Loop(float deltaTime)
 {
     Math::float2 input = 0.0f;
     if (IsKeyDown(SDL_SCANCODE_W)) input.y += 1.0f;
@@ -50,6 +50,7 @@ bool Application::Loop()
         input = Math::Normalize(input);
     }
     m_Player.Move(m_Scene, input);
+    m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
 
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();

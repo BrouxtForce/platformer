@@ -11,6 +11,8 @@ public:
 
     void Move(const Scene& scene, Math::float2 input);
 
+    inline Transform& GetTransform() { return m_Entity->transform; }
+
 private:
     Math::float2 m_Velocity{};
     Math::float2 m_GravityVelocity{};

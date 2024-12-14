@@ -14,7 +14,7 @@ public:
     Application() = default;
 
     bool Init();
-    bool Loop();
+    bool Loop(float deltaTime);
     void Exit();
 
     void OnKeyDown(const SDL_KeyboardEvent& event);

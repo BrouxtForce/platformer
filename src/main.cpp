@@ -33,8 +33,13 @@ SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
 
 SDL_AppResult SDL_AppIterate(void* state)
 {
+    uint64_t thisFrameTicks = SDL_GetTicksNS();
+    static uint64_t lastFrameTicks = thisFrameTicks;
+    double deltaTime = (double)(thisFrameTicks - lastFrameTicks) / 1'000'000'000.0;
+    lastFrameTicks = thisFrameTicks;
+
     Application* application = (Application*)state;
-    if (application->Loop())
+    if (application->Loop(deltaTime))
     {
         return SDL_APP_CONTINUE;
     }
