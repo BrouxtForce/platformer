@@ -10,6 +10,7 @@ add_executable(game
     src/main.cpp
     src/math.cpp
     src/physics.cpp
+    src/player.cpp
     src/renderer.cpp
     src/scene.cpp
     src/transform.cpp

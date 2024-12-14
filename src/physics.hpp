@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "scene.hpp"
 
 namespace Physics
@@ -10,6 +12,7 @@ namespace Physics
         Math::float2 contactPoint = 0.0f;
         Math::float2 normal = 0.0f;
         float t = 0.0f;
+        const Entity* entity = nullptr;
     };
 
     struct Line
@@ -18,7 +21,9 @@ namespace Physics
         Math::float2 to = 0.0f;
     };
 
-    Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity);
+    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position);
+
+    Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity, std::function<bool(CollisionData)> callback);
 
     CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity);
 

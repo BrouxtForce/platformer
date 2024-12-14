@@ -28,28 +28,28 @@ bool Application::Init()
 
     m_Scene.Load(Scene::City);
 
-    m_PlayerEntity = m_Scene.CreateEntity();
-    m_PlayerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
-    m_PlayerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
-    m_PlayerEntity->transform.scale = Math::float2(0.1);
-    m_PlayerEntity->shape = Shape::Ellipse;
+    Entity* playerEntity = m_Scene.CreateEntity();
+    playerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
+    playerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
+    playerEntity->transform.scale = Math::float2(0.1);
+    playerEntity->shape = Shape::Ellipse;
+    m_Player = Player(playerEntity);
 
     return true;
 }
 
 bool Application::Loop()
 {
-    Math::float2 movement = 0.0f;
-    if (IsKeyDown(SDL_SCANCODE_W)) movement.y += 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_A)) movement.x -= 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_S)) movement.y -= 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_D)) movement.x += 1.0f;
-    if (movement.x != 0.0f || movement.y != 0.0f)
+    Math::float2 input = 0.0f;
+    if (IsKeyDown(SDL_SCANCODE_W)) input.y += 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_A)) input.x -= 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_S)) input.y -= 1.0f;
+    if (IsKeyDown(SDL_SCANCODE_D)) input.x += 1.0f;
+    if (input.x != 0.0f || input.y != 0.0f)
     {
-        movement = Math::Normalize(movement);
+        input = Math::Normalize(input);
     }
-    constexpr float speed = 0.02f;
-    m_PlayerEntity->transform.position += Physics::CollideAndSlide(m_Scene, m_PlayerEntity->transform, movement * speed);
+    m_Player.Move(m_Scene, input);
 
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();

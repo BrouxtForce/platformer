@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <string>
 
 namespace Math
 {
@@ -27,7 +28,11 @@ namespace Math
         float2& operator*=(const float2& other);
         float2& operator/=(const float2& other);
 
+        float2 operator-();
+
         float& operator[](int index);
+
+        std::string ToString();
     };
 
     float2 operator+(const float2& left, const float2& right);
@@ -81,6 +86,7 @@ namespace Math
 
     float Length(float2 in);
     float LengthSquared(float2 in);
+    float Distance(float2 a, float2 b);
     float Dot(float2 a, float2 b);
     float2 Normalize(float2 in);
 

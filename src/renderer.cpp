@@ -154,6 +154,11 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     for (const auto& [_, entity] : scene.GetEntityMap())
     {
+        if ((entity.flags & (uint16_t)EntityFlags::GravityZone) != 0)
+        {
+            continue;
+        }
+
         DrawData& drawData = m_EntityDrawData[entity.id];
         if (drawData.empty)
         {

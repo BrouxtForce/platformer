@@ -18,8 +18,14 @@ enum class Shape
 
 enum class EntityFlags : uint16_t
 {
-    Player   = 1 << 0,
-    Collider = 1 << 1
+    Collider    = 1 << 0,
+    GravityZone = 1 << 1
+};
+
+struct GravityZone
+{
+    float minAngle = -M_PI;
+    float maxAngle = M_PI;
 };
 
 struct Entity
@@ -30,6 +36,7 @@ struct Entity
     Transform transform{};
     Material material{};
     Shape shape = Shape::Rectangle;
+    GravityZone gravityZone{};
 };
 
 class Scene

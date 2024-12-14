@@ -5,7 +5,39 @@
 
 namespace Physics
 {
-    Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity)
+    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position)
+    {
+        for (const auto& [_, entity] : scene.GetEntityMap())
+        {
+            if ((entity.flags & (uint16_t)EntityFlags::GravityZone) == 0)
+            {
+                continue;
+            }
+            switch (entity.shape)
+            {
+                case Shape::Rectangle:
+                    break;
+                case Shape::Ellipse: {
+                    Math::float2 zoneCenter = entity.transform.position;
+                    float zoneRadius = entity.transform.scale.x;
+                    if (Math::Distance(position, zoneCenter) > zoneRadius)
+                    {
+                        break;
+                    }
+                    Math::float2 direction = Math::Normalize(zoneCenter - position);
+                    float angle = std::atan2(-direction.y, -direction.x);
+                    if (angle >= entity.gravityZone.minAngle && angle <= entity.gravityZone.maxAngle)
+                    {
+                        return direction;
+                    }
+                    break;
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
+    Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity, std::function<bool(CollisionData)> callback)
     {
         constexpr int MAX_ITERATIONS = 5;
         constexpr float SMALL_DISTANCE = 0.001f;
@@ -23,6 +55,11 @@ namespace Physics
             velocity -= movement;
             velocity -= collisionData.normal * Math::Dot(velocity, collisionData.normal);
             resultVelocity += movement;
+
+            if (!callback(collisionData))
+            {
+                break;
+            }
         }
 
         return resultVelocity;
@@ -55,6 +92,7 @@ namespace Physics
             if (collision.t < minCollision.t)
             {
                 minCollision = collision;
+                minCollision.entity = &entity;
             }
         }
         return minCollision;

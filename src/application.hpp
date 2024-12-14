@@ -6,6 +6,7 @@
 #include <webgpu/webgpu.hpp>
 
 #include "renderer.hpp"
+#include "player.hpp"
 
 class Application
 {
@@ -33,6 +34,5 @@ private:
 
     std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
 
-    Entity* m_PlayerEntity = nullptr;
-    Math::float2 m_Gravity = Math::float2(0, -0.05f);
+    Player m_Player;
 };

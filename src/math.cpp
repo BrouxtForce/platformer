@@ -52,6 +52,11 @@ namespace Math
         return *this;
     }
 
+    float2 float2::operator-()
+    {
+        return float2(-x, -y);
+    }
+
     float& float2::operator[](int index)
     {
         switch (index)
@@ -61,6 +66,11 @@ namespace Math
         }
         assert(false);
         return x;
+    }
+
+    std::string float2::ToString()
+    {
+        return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
     }
 
     float2 operator+(const float2& left, const float2& right)
@@ -129,6 +139,11 @@ namespace Math
     float LengthSquared(float2 in)
     {
         return in.x * in.x + in.y * in.y;
+    }
+
+    float Distance(float2 a, float2 b)
+    {
+        return Length(a - b);
     }
 
     float Dot(float2 a, float2 b)
