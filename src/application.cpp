@@ -4,6 +4,9 @@
 #include <emscripten.h>
 #endif
 
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+
 #include "physics.hpp"
 #include "log.hpp"
 
@@ -40,6 +43,11 @@ bool Application::Init()
 
 bool Application::Loop(float deltaTime)
 {
+    static double frameTime = 0.0;
+    uint64_t frameStart = SDL_GetTicksNS();
+
+    m_Renderer.NewFrame();
+
     Math::float2 input = 0.0f;
     if (IsKeyDown(SDL_SCANCODE_W)) input.y += 1.0f;
     if (IsKeyDown(SDL_SCANCODE_A)) input.x -= 1.0f;
@@ -52,14 +60,29 @@ bool Application::Loop(float deltaTime)
     m_Player.Move(m_Scene, input);
     m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
 
+    ImGui::Text("CPU: %fms", frameTime);
+    ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);
+    ImGui::Text("Camera position: (%f, %f)", m_Camera.transform.position.x, m_Camera.transform.position.y);
+    ImGui::Text("Player position: (%f, %f)", m_Player.GetTransform().position.x, m_Player.GetTransform().position.y);
+    ImGui::Text("Player velocity: (%f, %f)", m_Player.velocity.x, m_Player.velocity.y);
+    ImGui::Text("Player speed: %f", Math::Length(m_Player.velocity));
+    ImGui::Text("Gravity direction: (%f, %f)", m_Player.gravityDirection.x, m_Player.gravityDirection.y);
+
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
+
+    frameTime = (double)(SDL_GetTicksNS() - frameStart) / 1'000'000.0;
     return m_Renderer.Render(m_Scene, m_Camera);
 }
 
 void Application::Exit()
 {
     SDL_DestroyWindow(m_Window);
+}
+
+void Application::OnEvent(const SDL_Event& event)
+{
+    ImGui_ImplSDL3_ProcessEvent(&event);
 }
 
 void Application::OnKeyDown(const SDL_KeyboardEvent& event)

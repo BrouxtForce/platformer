@@ -19,6 +19,8 @@ public:
     Renderer& operator=(const Renderer&) = delete;
 
     bool Init(SDL_Window* window);
+
+    void NewFrame();
     bool Render(const Scene& scene, const Camera& camera);
 
     void Resize();

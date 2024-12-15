@@ -1,5 +1,8 @@
 #include <sdl3webgpu.h>
 #include <webgpu/webgpu.hpp>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_wgpu.h>
 
 #include "math.hpp"
 #include "renderer.hpp"
@@ -91,7 +94,29 @@ bool Renderer::Init(SDL_Window* window)
     }
     ellipseRenderPipeline = renderPipeline.value();
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplSDL3_InitForOther(window);
+
+#if __EMSCRIPTEN__
+    ImGui::GetIO().IniFilename = nullptr;
+#endif
+
+    ImGui_ImplWGPU_InitInfo wgpuInitInfo{};
+    wgpuInitInfo.Device = m_Device;
+    wgpuInitInfo.RenderTargetFormat = m_Format;
+    wgpuInitInfo.DepthStencilFormat = m_DepthStencilFormat;
+
+    ImGui_ImplWGPU_Init(&wgpuInitInfo);
+
     return true;
+}
+
+void Renderer::NewFrame()
+{
+    ImGui_ImplWGPU_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
 }
 
 bool Renderer::Render(const Scene& scene, const Camera& camera)
@@ -211,6 +236,12 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
         renderEncoder.draw(6, 1, 0, 0);
     }
+
+    ImGui::Render();
+    ImDrawData* drawData = ImGui::GetDrawData();
+    // TODO: FramebufferScale was incorrect while resizing to fullscreen, so we'll stick to (1, 1) for now. Dear ImGui bug?
+    drawData->FramebufferScale = ImVec2(1.0f, 1.0f);
+    ImGui_ImplWGPU_RenderDrawData(drawData, renderEncoder);
     renderEncoder.end();
     renderEncoder.release();
 

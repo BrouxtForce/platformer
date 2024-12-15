@@ -17,6 +17,7 @@ public:
     bool Loop(float deltaTime);
     void Exit();
 
+    void OnEvent(const SDL_Event& event);
     void OnKeyDown(const SDL_KeyboardEvent& event);
     void OnKeyUp(const SDL_KeyboardEvent& event);
 

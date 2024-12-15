@@ -49,6 +49,7 @@ SDL_AppResult SDL_AppIterate(void* state)
 SDL_AppResult SDL_AppEvent(void* state, SDL_Event* event)
 {
     Application* application = (Application*)state;
+    application->OnEvent(*event);
     switch (event->type)
     {
         case SDL_EVENT_QUIT:

@@ -2,7 +2,23 @@ cmake_minimum_required(VERSION 3.19)
 
 project(Platformer)
 
+include(FetchContent)
+FetchContent_Declare(imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG b4c96355c9b51b54c4deb52e7d7cdfc7bf79bc2f
+)
+FetchContent_MakeAvailable(imgui)
+
 add_executable(game
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_wgpu.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+
     src/application.cpp
     src/buffer.cpp
     src/camera.cpp
@@ -18,6 +34,9 @@ add_executable(game
 )
 target_include_directories(game PUBLIC
     src
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${imgui_SOURCE_DIR}/misc/cpp
 )
 
 set_target_properties(game PROPERTIES
@@ -34,10 +53,14 @@ endif()
 
 if (EMSCRIPTEN)
 	target_link_options(game PRIVATE
+	    -O3
     	-sUSE_WEBGPU
         -sASYNCIFY
         -sENVIRONMENT=web
         --embed-file ${CMAKE_SOURCE_DIR}/shaders@/shaders)
+    target_compile_options(game PRIVATE -O3)
+else()
+    target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 endif()
 
 if(APPLE)
@@ -51,8 +74,6 @@ set(SDL_STATIC ON)
 
 # Disable AVIF Support
 set(SDL3IMAGE_AVIF OFF)
-
-include(FetchContent)
 
 FetchContent_Declare(
     SDL3
