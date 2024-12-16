@@ -185,4 +185,9 @@ namespace Math
             LerpSmooth(a.y, b.y, deltaTime, halfLifeSeconds)
         );
     }
+
+    float2 Direction(float angle)
+    {
+        return float2(std::cos(angle), std::sin(angle));
+    }
 }

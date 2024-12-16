@@ -6,6 +6,11 @@
 class Player
 {
 public:
+    float acceleration = 0.035f;
+    float jumpAcceleration = 0.04f;
+    float gravityAcceleration = 0.003f;
+    float drag = 0.50f;
+
     Math::float2 velocity{};
     Math::float2 gravityVelocity{};
     Math::float2 gravityDirection = Math::float2(0, -1.0f);
@@ -23,4 +28,7 @@ private:
     Entity* m_Entity = nullptr;
 
     bool m_IsOnGround = false;
+
+    Math::float2 m_ClosestEndDirection = 0.0f;
+    bool m_ClosestDirectionUsed = true;
 };

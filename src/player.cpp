@@ -6,14 +6,18 @@ Player::Player(Entity* entity)
 
 void Player::Move(const Scene& scene, Math::float2 input)
 {
-    std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position);
+    std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection, &m_ClosestEndDirection);
     if (gravity.has_value())
     {
         gravityDirection = gravity.value();
+        m_ClosestDirectionUsed = false;
+    }
+    else if (!m_ClosestDirectionUsed)
+    {
+        gravityDirection = m_ClosestEndDirection;
+        m_ClosestDirectionUsed = true;
     }
 
-    constexpr float acceleration = 0.03f;
-    constexpr float drag = 0.50f;
     velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.x * acceleration;
     velocity *= drag;
 
@@ -26,12 +30,10 @@ void Player::Move(const Scene& scene, Math::float2 input)
         }
     );
 
-    constexpr float gravityAcceleration = 0.002f;
     gravityVelocity += gravityDirection * gravityAcceleration;
 
     if (m_IsOnGround && input.y > 0.0f)
     {
-        constexpr float jumpAcceleration = 0.03f;
         gravityVelocity = -gravityDirection * jumpAcceleration;
     }
 

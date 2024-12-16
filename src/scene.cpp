@@ -45,9 +45,20 @@ static std::array<SceneDescription, 1> s_SceneDescriptions = {
             { Transform(Math::float2(-1.0f, -0.25f), Math::float2(1.0f, 0.25f)), Shape::Rectangle },
             { Transform(Math::float2(0.0f, -0.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
             { Transform(Math::float2(0.25f, -1.0f),  Math::float2(0.25f, 0.5f)), Shape::Rectangle },
+
+            { Transform(Math::float2(0.0f, -1.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
+            { Transform(Math::float2(-1.0f, -1.75f), Math::float2(1.0f, 0.25f)), Shape::Rectangle },
+            { Transform(Math::float2(-2.0f, -1.5f),  Math::float2(0.5f)       ), Shape::Ellipse },
+            { Transform(Math::float2(-2.25f,-0.75f), Math::float2(0.25f,0.75f)), Shape::Rectangle },
+            { Transform(Math::float2(-2.25f, 1.25f), Math::float2(0.25f,0.25f)), Shape::Rectangle },
+            { Transform(Math::float2(-2.0f, 1.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
+            { Transform(Math::float2(-0.5f, 1.75f),  Math::float2(1.5f, 0.25f)), Shape::Rectangle },
         },
         .gravityZones = {
-            { Transform(Math::float2(0.0f, -0.5f), Math::float2(1.5f)), 0.0f, M_PI_2 }
+            { Transform(Math::float2(0.0f, -0.5f),  Math::float2(1.5f)), 0.0f, M_PI_2 },
+            { Transform(Math::float2(0.0f, -1.5f),  Math::float2(1.5f)), -M_PI_2, 0.0f },
+            { Transform(Math::float2(-2.0f, -1.5f), Math::float2(1.5f)), -M_PI, -M_PI_2 },
+            { Transform(Math::float2(-2.0f, 1.5f),  Math::float2(1.5f)), M_PI_2, M_PI }
         },
         .seed = 892542184
     }

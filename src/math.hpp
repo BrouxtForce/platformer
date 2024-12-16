@@ -95,4 +95,6 @@ namespace Math
 
     float LerpSmooth(float a, float b, float deltaTime, float halfLifeSeconds);
     float2 LerpSmooth(float2 a, float2 b, float deltaTime, float halfLifeSeconds);
+
+    float2 Direction(float angle);
 }

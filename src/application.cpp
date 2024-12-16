@@ -53,10 +53,6 @@ bool Application::Loop(float deltaTime)
     if (IsKeyDown(SDL_SCANCODE_A)) input.x -= 1.0f;
     if (IsKeyDown(SDL_SCANCODE_S)) input.y -= 1.0f;
     if (IsKeyDown(SDL_SCANCODE_D)) input.x += 1.0f;
-    if (input.x != 0.0f || input.y != 0.0f)
-    {
-        input = Math::Normalize(input);
-    }
     m_Player.Move(m_Scene, input);
     m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
 
@@ -66,6 +62,10 @@ bool Application::Loop(float deltaTime)
     ImGui::Text("Player position: (%f, %f)", m_Player.GetTransform().position.x, m_Player.GetTransform().position.y);
     ImGui::Text("Player velocity: (%f, %f)", m_Player.velocity.x, m_Player.velocity.y);
     ImGui::Text("Player speed: %f", Math::Length(m_Player.velocity));
+    ImGui::DragFloat("Player acceleration", &m_Player.acceleration, 0.001f);
+    ImGui::DragFloat("Player jump acceleration", &m_Player.jumpAcceleration, 0.001f);
+    ImGui::DragFloat("Player gravity acceleration", &m_Player.gravityAcceleration, 0.001f);
+    ImGui::DragFloat("Player drag", &m_Player.drag, 0.001f);
     ImGui::Text("Gravity direction: (%f, %f)", m_Player.gravityDirection.x, m_Player.gravityDirection.y);
 
     m_Renderer.Resize();

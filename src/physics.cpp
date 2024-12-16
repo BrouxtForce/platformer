@@ -5,7 +5,7 @@
 
 namespace Physics
 {
-    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position)
+    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity, Math::float2* closestEndDirection)
     {
         for (const auto& [_, entity] : scene.GetEntityMap())
         {
@@ -25,9 +25,22 @@ namespace Physics
                         break;
                     }
                     Math::float2 direction = Math::Normalize(zoneCenter - position);
+                    if (Math::Dot(currentGravity, direction) < std::acos(M_PI_4))
+                    {
+                        break;
+                    }
+
                     float angle = std::atan2(-direction.y, -direction.x);
                     if (angle >= entity.gravityZone.minAngle && angle <= entity.gravityZone.maxAngle)
                     {
+                        if (std::abs(angle - entity.gravityZone.minAngle) < std::abs(angle - entity.gravityZone.maxAngle))
+                        {
+                            *closestEndDirection = -Math::Direction(entity.gravityZone.minAngle);
+                        }
+                        else
+                        {
+                            *closestEndDirection = -Math::Direction(entity.gravityZone.maxAngle);
+                        }
                         return direction;
                     }
                     break;
