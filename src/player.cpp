@@ -4,7 +4,7 @@
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
 
-void Player::Move(const Scene& scene, Math::float2 input)
+void Player::Move(const Scene& scene, Math::float2 input, bool jump)
 {
     std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection, &m_ClosestEndDirection);
     if (gravity.has_value())
@@ -32,9 +32,29 @@ void Player::Move(const Scene& scene, Math::float2 input)
 
     gravityVelocity += gravityDirection * gravityAcceleration;
 
-    if (m_IsOnGround && input.y > 0.0f)
+    m_JumpFrames++;
+    if (jump)
     {
-        gravityVelocity = -gravityDirection * jumpAcceleration;
+        m_JumpFrames = 0;
+    }
+    if (m_IsOnGround)
+    {
+        if (m_JumpFrames < s_MaxJumpFrames)
+        {
+            Jump();
+        }
+        else
+        {
+            m_CoyoteFrames = 0;
+        }
+    }
+    if (m_CoyoteFrames < s_MaxCoyoteFrames)
+    {
+        m_CoyoteFrames++;
+        if (m_JumpFrames == 0)
+        {
+            Jump();
+        }
     }
 
     m_IsOnGround = false;
@@ -52,4 +72,11 @@ void Player::Move(const Scene& scene, Math::float2 input)
             return true;
         }
     );
+}
+
+void Player::Jump()
+{
+    gravityVelocity = -gravityDirection * jumpAcceleration;
+    m_JumpFrames = s_MaxJumpFrames;
+    m_CoyoteFrames = s_MaxCoyoteFrames;
 }

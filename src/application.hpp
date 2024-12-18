@@ -22,6 +22,7 @@ public:
     void OnKeyUp(const SDL_KeyboardEvent& event);
 
     bool IsKeyDown(SDL_Scancode scancode);
+    bool IsKeyPressed(SDL_Scancode scancode);
 
 private:
     static constexpr int WINDOW_WIDTH = 640;
@@ -34,6 +35,7 @@ private:
     Camera m_Camera;
 
     std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
+    std::bitset<SDL_SCANCODE_COUNT> m_KeysPressed;
 
     Player m_Player;
 };

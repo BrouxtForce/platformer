@@ -18,7 +18,8 @@ public:
     Player() = default;
     Player(Entity* entity);
 
-    void Move(const Scene& scene, Math::float2 input);
+    void Move(const Scene& scene, Math::float2 input, bool jump);
+    void Jump();
 
     inline Transform& GetTransform() {
         return m_Entity->transform;
@@ -31,4 +32,10 @@ private:
 
     Math::float2 m_ClosestEndDirection = 0.0f;
     bool m_ClosestDirectionUsed = true;
+
+    static constexpr int s_MaxCoyoteFrames = 5;
+    int m_CoyoteFrames = s_MaxCoyoteFrames + 1;
+
+    static constexpr int s_MaxJumpFrames = 5;
+    int m_JumpFrames = s_MaxCoyoteFrames + 1;
 };

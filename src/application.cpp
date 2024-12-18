@@ -53,8 +53,10 @@ bool Application::Loop(float deltaTime)
     if (IsKeyDown(SDL_SCANCODE_A)) input.x -= 1.0f;
     if (IsKeyDown(SDL_SCANCODE_S)) input.y -= 1.0f;
     if (IsKeyDown(SDL_SCANCODE_D)) input.x += 1.0f;
-    m_Player.Move(m_Scene, input);
+    m_Player.Move(m_Scene, input, IsKeyPressed(SDL_SCANCODE_W) || IsKeyPressed(SDL_SCANCODE_SPACE));
     m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
+
+    m_KeysPressed.reset();
 
     ImGui::Text("CPU: %fms", frameTime);
     ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);
@@ -88,7 +90,11 @@ void Application::OnEvent(const SDL_Event& event)
 void Application::OnKeyDown(const SDL_KeyboardEvent& event)
 {
     assert(event.scancode >= 0 && event.scancode <= m_KeysDown.size());
-    m_KeysDown[event.scancode] = 1;
+    if (!event.repeat)
+    {
+        m_KeysDown[event.scancode] = 1;
+        m_KeysPressed[event.scancode] = 1;
+    }
 }
 
 void Application::OnKeyUp(const SDL_KeyboardEvent& event)
@@ -101,4 +107,10 @@ bool Application::IsKeyDown(SDL_Scancode scancode)
 {
     assert(scancode >= 0 && scancode <= m_KeysDown.size());
     return m_KeysDown[scancode];
+}
+
+bool Application::IsKeyPressed(SDL_Scancode scancode)
+{
+    assert(scancode >= 0 && scancode < m_KeysPressed.size());
+    return m_KeysPressed[scancode];
 }
