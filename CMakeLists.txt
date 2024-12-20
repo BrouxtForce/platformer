@@ -22,6 +22,7 @@ add_executable(game
     src/application.cpp
     src/buffer.cpp
     src/camera.cpp
+    src/font-atlas.cpp
     src/log.cpp
     src/main.cpp
     src/math.cpp
@@ -34,9 +35,17 @@ add_executable(game
 )
 target_include_directories(game PUBLIC
     src
+    include
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${imgui_SOURCE_DIR}/misc/cpp
+)
+
+target_compile_definitions(game PRIVATE
+    IMGUI_STB_TRUETYPE_FILENAME="stb/stb_truetype.h"
+    IMGUI_STB_RECT_PACK_FILENAME="stb/stb_rect_pack.h"
+    IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+    IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 )
 
 set_target_properties(game PROPERTIES
@@ -57,7 +66,9 @@ if (EMSCRIPTEN)
     	-sUSE_WEBGPU
         -sASYNCIFY
         -sENVIRONMENT=web
-        --embed-file ${CMAKE_SOURCE_DIR}/shaders@/shaders)
+        --embed-file ${CMAKE_SOURCE_DIR}/shaders@/shaders
+        --preload-file ${CMAKE_SOURCE_DIR}/assets/fonts/Roboto/Roboto-Regular.ttf@/assets/fonts/Roboto/Roboto-Regular.ttf
+    )
     target_compile_options(game PRIVATE -O3)
 else()
     target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)

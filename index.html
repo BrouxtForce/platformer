@@ -22,6 +22,10 @@
                 preRun: [],
                 postRun: [],
                 canvas: document.getElementById("canvas"),
+                locateFile: (path, prefix) =>
+                    path.endsWith(".data")
+                        ? "build/web/" + path
+                        : prefix + path,
             };
         </script>
         <script async type="text/javascript" src="build/web/game.js"></script>

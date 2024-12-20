@@ -94,6 +94,13 @@ bool Renderer::Init(SDL_Window* window)
     }
     ellipseRenderPipeline = renderPipeline.value();
 
+    m_FontAtlas.Init(*this, s_FontAtlasWidth, s_FontAtlasHeight);
+    bool success = m_FontAtlas.LoadFont(m_Queue, "assets/fonts/Roboto/Roboto-Regular.ttf", Charset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. "), 32.0f);
+    if (!success)
+    {
+        return false;
+    }
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui_ImplSDL3_InitForOther(window);
@@ -321,17 +328,11 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const std::string vertexEntry = shader + "_vert";
     const std::string fragmentEntry = shader + "_frag";
 
-    // TODO: SDL_free
-    static const std::string basePath = SDL_GetBasePath();
-#if __EMSCRIPTEN__
-    const std::string shaderPath = basePath + "shaders/" + shader + ".wgsl";
-#else
-    const std::string shaderPath = basePath + "../shaders/" + shader + ".wgsl";
-#endif
+    const std::string shaderPath = "shaders/" + shader + ".wgsl";
     const std::string shaderSource = ReadFile(shaderPath);
     if (shaderSource.empty())
     {
-        Log::Error("Failed to load shader '" + (std::string)shaderPath.c_str() + "'");
+        Log::Error("Failed to load shader '" + shaderPath + "'");
         return std::nullopt;
     }
 
@@ -394,6 +395,11 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     pipelineDescriptor.layout = m_PipelineLayout;
 
     return m_Device.createRenderPipeline(pipelineDescriptor);
+}
+
+void Renderer::ImGuiDebugTextures()
+{
+    ImGui::Image(m_FontAtlas.GetTextureView(), ImVec2(256, 256));
 }
 
 bool Renderer::LoadAdapterSync()

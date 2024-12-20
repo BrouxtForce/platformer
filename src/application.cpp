@@ -70,6 +70,12 @@ bool Application::Loop(float deltaTime)
     ImGui::DragFloat("Player drag", &m_Player.drag, 0.001f);
     ImGui::Text("Gravity direction: (%f, %f)", m_Player.gravityDirection.x, m_Player.gravityDirection.y);
 
+    if (ImGui::TreeNode("Debug Textures"))
+    {
+        m_Renderer.ImGuiDebugTextures();
+        ImGui::TreePop();
+    }
+
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
 

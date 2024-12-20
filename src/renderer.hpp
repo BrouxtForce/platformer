@@ -9,6 +9,7 @@
 #include "scene.hpp"
 #include "buffer.hpp"
 #include "camera.hpp"
+#include "font-atlas.hpp"
 
 class Renderer
 {
@@ -29,6 +30,8 @@ public:
     inline int GetHeight() { return m_Height; }
 
     std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, wgpu::TextureFormat format);
+
+    void ImGuiDebugTextures();
 
 private:
     SDL_Window* m_Window = nullptr;
@@ -83,4 +86,10 @@ private:
 
     Buffer m_CameraBuffer;
     wgpu::BindGroup m_CameraBindGroup;
+
+    constexpr static int s_FontAtlasWidth = 256;
+    constexpr static int s_FontAtlasHeight = 256;
+    FontAtlas m_FontAtlas;
+
+    friend class FontAtlas;
 };
