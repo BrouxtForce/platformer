@@ -26,6 +26,7 @@ add_executable(game
     src/log.cpp
     src/main.cpp
     src/math.cpp
+    src/menu.cpp
     src/physics.cpp
     src/player.cpp
     src/renderer.cpp

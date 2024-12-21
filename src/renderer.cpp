@@ -184,17 +184,18 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     m_CameraBuffer.Write(m_Queue, viewMatrix);
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
-    for (const auto& [_, entity] : scene.GetEntityMap())
+    for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
-        if ((entity.flags & (uint16_t)EntityFlags::GravityZone) != 0)
+        if ((entity->flags & (uint16_t)EntityFlags::GravityZone) != 0 ||
+            (entity->flags & (uint16_t)EntityFlags::Hidden) != 0)
         {
             continue;
         }
 
-        DrawData& drawData = m_EntityDrawData[entity.id];
+        DrawData& drawData = m_EntityDrawData[entity->id];
         if (drawData.empty)
         {
-            Log::Debug("Create entity draw data (" + std::to_string(entity.id) + ")");
+            Log::Debug("Create entity draw data (" + std::to_string(entity->id) + ")");
 
             drawData.empty = false;
 
@@ -221,15 +222,22 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
         }
         TransformBindGroupData transformData {
-            .transform = entity.transform.GetMatrix(),
-            .zIndex = entity.zIndex
+            .transform = entity->transform.GetMatrix(),
+            .zIndex = entity->zIndex
         };
-        drawData.materialBuffer.Write(m_Queue, entity.material);
+        drawData.materialBuffer.Write(m_Queue, entity->material);
         drawData.transformBuffer.Write(m_Queue, transformData);
         renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
-        switch (entity.shape)
+        if ((entity->flags & (uint16_t)EntityFlags::Text) != 0)
+        {
+            float height = m_FontAtlas.MeasureTextHeight(entity->name);
+            m_FontAtlas.RenderText(m_Queue, renderEncoder, entity->name, 1.0f, 2.0f / height, 0.0f);
+            continue;
+        }
+
+        switch (entity->shape)
         {
             case Shape::Rectangle:
                 renderEncoder.setPipeline(quadRenderPipeline);

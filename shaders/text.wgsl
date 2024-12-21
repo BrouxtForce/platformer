@@ -1,3 +1,21 @@
+struct Material {
+    color: vec3f,
+};
+
+@group(0) @binding(0)
+var<uniform> material: Material;
+
+struct Transform {
+    modelMatrix: mat3x3f,
+    zIndex: u32,
+};
+
+@group(1) @binding(0)
+var<uniform> transform: Transform;
+
+@group(2) @binding(0)
+var<uniform> viewMatrix: mat3x3f;
+
 struct GlyphQuad
 {
     position: vec2f,
@@ -19,19 +37,23 @@ const QuadPositions: array<vec2f, 4> = array<vec2f, 4>(
     vec2f( 1,  1)
 );
 
-@group(0) @binding(0) var<storage> glyphs: array<GlyphQuad>;
-@group(0) @binding(1) var fontTexture: texture_2d<f32>;
-@group(0) @binding(2) var fontSampler: sampler;
+@group(3) @binding(0) var<storage> glyphs: array<GlyphQuad>;
+@group(3) @binding(1) var fontTexture: texture_2d<f32>;
+@group(3) @binding(2) var fontSampler: sampler;
+
+const U16_MAX = 0x1p16f - 1.0f;
 
 @vertex
 fn text_vert(@builtin(vertex_index) vertexId: u32, @builtin(instance_index) instanceId: u32) -> TextVertexOut {
     var out: TextVertexOut;
 
-    let position = QuadPositions[vertexId];
     let glyph = glyphs[instanceId];
+    let position = QuadPositions[vertexId] * glyph.scale + glyph.position;
 
-    out.position = vec4f(position * glyph.scale + glyph.position, 0.0f, 1.0f);
-    out.uv = (position + 1.0f) / 2.0f * glyph.texScale + glyph.texPosition;
+    out.position = vec4f(viewMatrix * transform.modelMatrix * vec3f(position, 1), 1);
+    out.uv = (QuadPositions[vertexId] + 1.0f) / 2.0f * glyph.texScale + glyph.texPosition;
+
+    out.position.z = f32(transform.zIndex) / U16_MAX;
 
     return out;
 }
@@ -44,5 +66,5 @@ fn text_frag(in: TextVertexOut) -> @location(0) vec4f {
     let smoothing = 1.0 / 32.0f;
     let alpha = smoothstep(cutoff - smoothing, cutoff + smoothing, distance);
 
-    return vec4f(alpha);
+    return vec4f(material.color * alpha, alpha);
 }

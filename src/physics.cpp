@@ -7,19 +7,19 @@ namespace Physics
 {
     std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity, Math::float2* closestEndDirection)
     {
-        for (const auto& [_, entity] : scene.GetEntityMap())
+        for (const std::unique_ptr<Entity>& entity : scene.entities)
         {
-            if ((entity.flags & (uint16_t)EntityFlags::GravityZone) == 0)
+            if ((entity->flags & (uint16_t)EntityFlags::GravityZone) == 0)
             {
                 continue;
             }
-            switch (entity.shape)
+            switch (entity->shape)
             {
                 case Shape::Rectangle:
                     break;
                 case Shape::Ellipse: {
-                    Math::float2 zoneCenter = entity.transform.position;
-                    float zoneRadius = entity.transform.scale.x;
+                    Math::float2 zoneCenter = entity->transform.position;
+                    float zoneRadius = entity->transform.scale.x;
                     if (Math::Distance(position, zoneCenter) > zoneRadius)
                     {
                         break;
@@ -31,15 +31,15 @@ namespace Physics
                     }
 
                     float angle = std::atan2(-direction.y, -direction.x);
-                    if (angle >= entity.gravityZone.minAngle && angle <= entity.gravityZone.maxAngle)
+                    if (angle >= entity->gravityZone.minAngle && angle <= entity->gravityZone.maxAngle)
                     {
-                        if (std::abs(angle - entity.gravityZone.minAngle) < std::abs(angle - entity.gravityZone.maxAngle))
+                        if (std::abs(angle - entity->gravityZone.minAngle) < std::abs(angle - entity->gravityZone.maxAngle))
                         {
-                            *closestEndDirection = -Math::Direction(entity.gravityZone.minAngle);
+                            *closestEndDirection = -Math::Direction(entity->gravityZone.minAngle);
                         }
                         else
                         {
-                            *closestEndDirection = -Math::Direction(entity.gravityZone.maxAngle);
+                            *closestEndDirection = -Math::Direction(entity->gravityZone.maxAngle);
                         }
                         return direction;
                     }
@@ -81,21 +81,21 @@ namespace Physics
     CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity)
     {
         CollisionData minCollision { .collided = false, .t = INFINITY };
-        for (const auto& [_, entity] : scene.GetEntityMap())
+        for (const std::unique_ptr<Entity>& entity : scene.entities)
         {
-            if ((entity.flags & (uint16_t)EntityFlags::Collider) == 0)
+            if ((entity->flags & (uint16_t)EntityFlags::Collider) == 0)
             {
                 continue;
             }
 
             CollisionData collision { .collided = false };
-            switch (entity.shape)
+            switch (entity->shape)
             {
                 case Shape::Rectangle:
-                    collision = EllipseRectCollision(ellipse, velocity, entity.transform);
+                    collision = EllipseRectCollision(ellipse, velocity, entity->transform);
                     break;
                 case Shape::Ellipse:
-                    collision = CircleCircleCollision(ellipse, velocity, entity.transform);
+                    collision = CircleCircleCollision(ellipse, velocity, entity->transform);
                     break;
             }
             if (!collision.collided)
@@ -105,7 +105,7 @@ namespace Physics
             if (collision.t < minCollision.t)
             {
                 minCollision = collision;
-                minCollision.entity = &entity;
+                minCollision.entity = entity.get();
             }
         }
         return minCollision;

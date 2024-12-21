@@ -44,6 +44,8 @@ public:
     // Returns true if successful
     bool LoadFont(wgpu::Queue queue, const std::string& path, const Charset& charset, float fontSize);
 
+    float MeasureTextHeight(const std::string& text);
+
     void NewFrame();
     // Renders the text horizontally centered
     void RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position) const;
@@ -64,6 +66,7 @@ private:
     static constexpr size_t s_QuadBufferSize = 4096;
     Buffer m_QuadBuffer;
     wgpu::BindGroup m_QuadBindGroup;
+    int m_QuadBindGroupIndex = 0;
 
     wgpu::Sampler m_Sampler;
     wgpu::Texture m_Texture;
@@ -84,6 +87,7 @@ private:
     std::unordered_map<char, Glyph> m_GlyphMap;
 
     float GetTextWidth(const std::string& text) const;
+    float GetTextHeight(const std::string& text) const;
 
     const Glyph& GetGlyph(char c) const;
 };

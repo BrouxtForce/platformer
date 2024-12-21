@@ -7,6 +7,13 @@
 
 #include "renderer.hpp"
 #include "player.hpp"
+#include "menu.hpp"
+
+enum class GameState
+{
+    MainMenu,
+    Game
+};
 
 class Application
 {
@@ -31,6 +38,10 @@ private:
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;
 
+    GameState m_GameState = GameState::MainMenu;
+
+    Menu m_Menu;
+
     Scene m_Scene;
     Camera m_Camera;
 
@@ -38,4 +49,7 @@ private:
     std::bitset<SDL_SCANCODE_COUNT> m_KeysPressed;
 
     Player m_Player;
+
+    bool LoopMainMenu(float deltaTime);
+    bool LoopGame(float deltaTime);
 };

@@ -7,12 +7,13 @@
 Entity* Scene::CreateEntity()
 {
     static uint16_t nextId = 1;
-    Entity entity {
-        .id = nextId++,
-        .zIndex = 100
-    };
-    assert(!m_EntityMap.contains(entity.id));
-    return &m_EntityMap.insert({ entity.id, entity }).first->second;
+
+    entities.push_back(std::make_unique<Entity>());
+    Entity* entity = entities.back().get();
+    entity->id = nextId++;
+    entity->zIndex = 100;
+
+    return entity;
 }
 
 struct Collider

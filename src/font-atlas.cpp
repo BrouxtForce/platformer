@@ -1,6 +1,7 @@
 #include "font-atlas.hpp"
 
 #include <SDL3/SDL.h>
+#include <cmath>
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -128,9 +129,18 @@ void FontAtlas::Init(Renderer& renderer, int width, int height)
 
     m_QuadBindGroup = renderer.m_Device.createBindGroup(bindGroupDescriptor);
 
+    std::vector<WGPUBindGroupLayout> packedBindGroupLayouts;
+    packedBindGroupLayouts.reserve(renderer.m_BindGroupLayouts.size() + 1);
+    for (WGPUBindGroupLayout layout : renderer.m_BindGroupLayouts)
+    {
+        packedBindGroupLayouts.push_back(layout);
+    }
+    packedBindGroupLayouts.push_back(bindGroupLayout);
+
     wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor = wgpu::Default;
-    pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)&bindGroupLayout;
-    pipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = packedBindGroupLayouts.data();
+    pipelineLayoutDescriptor.bindGroupLayoutCount = packedBindGroupLayouts.size();
+    m_QuadBindGroupIndex = packedBindGroupLayouts.size() - 1;
 
     wgpu::PipelineLayout pipelineLayout = renderer.m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
@@ -299,6 +309,11 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, const std::string& path, const Chars
     return true;
 }
 
+float FontAtlas::MeasureTextHeight(const std::string &text)
+{
+    return GetTextHeight(text) / m_FontSize;
+}
+
 void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position) const
 {
     if (text.empty()) return;
@@ -318,8 +333,16 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
 
     float scale = size / m_FontSize;
 
-    float textWidth = GetTextWidth(text);
-    position.x -= textWidth / 2 * scale;
+    position.x -= GetTextWidth(text) / 2 * scale;
+    position.y -= GetTextHeight(text) / 2 * scale;
+
+    float maxPosition = -INFINITY;
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        const Glyph& glyph = GetGlyph(text[i]);
+        maxPosition = std::max(glyph.offset.y + glyph.size.y, maxPosition);
+    }
+    position.y += maxPosition * scale;
 
     float currentPoint = 0.0f;
     for (int i = 0; i < (int)text.size(); i++)
@@ -349,7 +372,7 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     queue.writeBuffer(m_QuadBuffer.get(), 0, quads.data(), quads.size() * sizeof(GlyphQuad));
 
     // TODO: Dynamic offset to support multiple calls per frame
-    renderEncoder.setBindGroup(0, m_QuadBindGroup, 0, nullptr);
+    renderEncoder.setBindGroup(m_QuadBindGroupIndex, m_QuadBindGroup, 0, nullptr);
     renderEncoder.draw(4, quads.size(), 0, 0);
 }
 
@@ -375,6 +398,19 @@ float FontAtlas::GetTextWidth(const std::string& text) const
     }
 
     return right - left;
+}
+
+float FontAtlas::GetTextHeight(const std::string& text) const
+{
+    float top = 0.0f;
+    float bottom = 0.0f;
+    for (int i = 0; i < (int)text.size(); i++)
+    {
+        const Glyph& glyph = GetGlyph(text[i]);
+        top    = std::min(glyph.offset.y, top);
+        bottom = std::max(glyph.offset.y + glyph.size.y, bottom);
+    }
+    return std::abs(top - bottom);
 }
 
 const FontAtlas::Glyph& FontAtlas::GetGlyph(char c) const

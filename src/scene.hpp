@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <unordered_map>
+#include <memory>
 
 #include "transform.hpp"
 
@@ -18,8 +18,11 @@ enum class Shape
 
 enum class EntityFlags : uint16_t
 {
+    None        = 0,
     Collider    = 1 << 0,
-    GravityZone = 1 << 1
+    GravityZone = 1 << 1,
+    Text        = 1 << 2,
+    Hidden      = 1 << 3
 };
 
 struct GravityZone
@@ -30,6 +33,7 @@ struct GravityZone
 
 struct Entity
 {
+    std::string name;
     uint16_t id = 1;
     uint16_t flags = 0;
     uint16_t zIndex = 0;
@@ -42,6 +46,8 @@ struct Entity
 class Scene
 {
 public:
+    std::vector<std::unique_ptr<Entity>> entities;
+
     struct Properties
     {
         Math::Color backgroundColor;
@@ -53,14 +59,6 @@ public:
 
     Entity* CreateEntity();
 
-    inline const std::unordered_map<uint32_t, Entity>& GetEntityMap() const
-    {
-        return m_EntityMap;
-    }
-
     constexpr static int City = 0;
     void Load(int index);
-
-private:
-    std::unordered_map<uint32_t, Entity> m_EntityMap;
 };

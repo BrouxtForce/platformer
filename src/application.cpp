@@ -43,6 +43,48 @@ bool Application::Init()
 
 bool Application::Loop(float deltaTime)
 {
+    switch (m_GameState)
+    {
+        case GameState::MainMenu:
+            return LoopMainMenu(deltaTime);
+        case GameState::Game:
+            return LoopGame(deltaTime);
+        default:
+            Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
+            return false;
+    }
+    return true;
+}
+
+bool Application::LoopMainMenu(float /* deltaTime */)
+{
+    m_Renderer.NewFrame();
+
+    Math::float2 mousePosition = 0.0f;
+    SDL_MouseButtonFlags flags = SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
+
+    mousePosition /= Math::float2(m_Renderer.GetWidth(), m_Renderer.GetHeight());
+    mousePosition = mousePosition * 2.0f - 1.0f;
+    mousePosition *= { (float)m_Renderer.GetWidth() / m_Renderer.GetHeight(), -1.0f };
+
+    m_Menu.Begin(mousePosition, (bool)(flags & SDL_BUTTON_LMASK));
+    m_Menu.SetBackgroundColor({ 0.2, 0.2, 0.2 });
+    m_Menu.SetFillColor({ 0.5, 0.5, 0.5 });
+    if (m_Menu.Button("Start Game", { 0.0f, 0.5f }, { 0.5f, 0.07f }, { 0.0f, 0.05f }))
+    {
+        m_GameState = GameState::Game;
+    }
+
+    ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
+
+    m_Renderer.Resize();
+
+    Camera camera { .aspect = (float)m_Renderer.GetWidth() / m_Renderer.GetHeight() };
+    return m_Renderer.Render(m_Menu.scene, camera);
+}
+
+bool Application::LoopGame(float deltaTime)
+{
     static double frameTime = 0.0;
     uint64_t frameStart = SDL_GetTicksNS();
 
