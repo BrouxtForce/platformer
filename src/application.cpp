@@ -68,11 +68,26 @@ bool Application::LoopMainMenu(float /* deltaTime */)
     mousePosition *= { (float)m_Renderer.GetWidth() / m_Renderer.GetHeight(), -1.0f };
 
     m_Menu.Begin(mousePosition, (bool)(flags & SDL_BUTTON_LMASK));
+
     m_Menu.SetBackgroundColor({ 0.2, 0.2, 0.2 });
     m_Menu.SetFillColor({ 0.5, 0.5, 0.5 });
-    if (m_Menu.Button("Start Game", { 0.0f, 0.5f }, { 0.5f, 0.07f }, { 0.0f, 0.05f }))
+
+    m_Menu.Text("Untitled Platformer", { 0.0f, 0.5f }, 0.1f);
+
+    const Math::float2 buttonSize = { 0.5f, 0.07f };
+    const Math::float2 buttonPadding = { 0.0f, 0.05f };
+    if (m_Menu.Button("Start Game", { 0.0f, 0.05f }, buttonSize, buttonPadding))
     {
         m_GameState = GameState::Game;
+    }
+
+    // TODO: Settings menu
+    m_Menu.Button("Settings", { 0.0f, -0.25f }, buttonSize, buttonPadding);
+
+    bool shouldExit = false;
+    if (m_Menu.Button("Exit Game", { 0.0f, -0.55f }, buttonSize, buttonPadding))
+    {
+        shouldExit = true;
     }
 
     ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
@@ -80,7 +95,7 @@ bool Application::LoopMainMenu(float /* deltaTime */)
     m_Renderer.Resize();
 
     Camera camera { .aspect = (float)m_Renderer.GetWidth() / m_Renderer.GetHeight() };
-    return m_Renderer.Render(m_Menu.scene, camera);
+    return m_Renderer.Render(m_Menu.scene, camera) && !shouldExit;
 }
 
 bool Application::LoopGame(float deltaTime)

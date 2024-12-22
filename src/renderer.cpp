@@ -133,6 +133,7 @@ void Renderer::NewFrame()
     ImGui_ImplWGPU_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    m_FontAtlas.NewFrame();
 }
 
 bool Renderer::Render(const Scene& scene, const Camera& camera)
@@ -241,7 +242,8 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
         if ((entity->flags & (uint16_t)EntityFlags::Text) != 0)
         {
-            float height = m_FontAtlas.MeasureTextHeight(entity->name);
+            // "Ag" is an approximation of the entire alphabet
+            float height = m_FontAtlas.MeasureTextHeight("Ag");
             m_FontAtlas.RenderText(m_Queue, renderEncoder, entity->name, 1.0f, 2.0f / height, 0.0f);
             continue;
         }

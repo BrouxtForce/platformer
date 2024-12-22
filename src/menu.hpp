@@ -17,7 +17,7 @@ public:
     void SetBackgroundColor(Math::Color color);
     void SetFillColor(Math::Color color);
 
-    void Text(const std::string& text, Math::float2 center, Math::float2 extent);
+    void Text(const std::string& text, Math::float2 center, float scale);
     bool Button(const std::string& text, Math::float2 center, Math::float2 extent, Math::float2 padding = 0.0f);
 
 private:

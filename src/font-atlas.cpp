@@ -310,11 +310,14 @@ float FontAtlas::MeasureTextHeight(const std::string &text)
     return GetTextHeight(text) / m_FontSize;
 }
 
-void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position) const
+void FontAtlas::NewFrame()
+{
+    m_QuadsWritten = 0;
+}
+
+void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position)
 {
     if (text.empty()) return;
-
-    renderEncoder.setPipeline(m_RenderPipeline);
 
     struct GlyphQuad
     {
@@ -330,15 +333,10 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     float scale = size / m_FontSize;
 
     position.x -= GetTextWidth(text) / 2 * scale;
-    position.y -= GetTextHeight(text) / 2 * scale;
+    position.y -= GetTextHeight(std::string(1, s_DefaultChar)) / 2 * scale;
 
-    float maxPosition = -INFINITY;
-    for (int i = 0; i < (int)text.size(); i++)
-    {
-        const Glyph& glyph = GetGlyph(text[i]);
-        maxPosition = std::max(glyph.offset.y + glyph.size.y, maxPosition);
-    }
-    position.y += maxPosition * scale;
+    auto a = GetGlyph(s_DefaultChar);
+    position.y += (a.offset.y + a.size.y) * scale;
 
     float currentPoint = 0.0f;
     for (int i = 0; i < (int)text.size(); i++)
@@ -365,11 +363,22 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     }
     assert(quads.size() > 0);
 
-    queue.writeBuffer(m_QuadBuffer.get(), 0, quads.data(), quads.size() * sizeof(GlyphQuad));
+    size_t writeSize = quads.size() * sizeof(GlyphQuad);
+    if (m_QuadsWritten * sizeof(GlyphQuad) + writeSize > s_QuadBufferSize)
+    {
+        // Not enough space in m_QuadBuffer
+        constexpr size_t maxCharCount = s_QuadBufferSize / sizeof(GlyphQuad);
+        Log::Error("Font atlas RenderText() character limit reached (Max " + std::to_string(maxCharCount) + " characters).");
+        return;
+    }
+    size_t offset = m_QuadsWritten * sizeof(GlyphQuad);
+    queue.writeBuffer(m_QuadBuffer.get(), offset, quads.data(), writeSize);
 
-    // TODO: Dynamic offset to support multiple calls per frame
+    renderEncoder.setPipeline(m_RenderPipeline);
     renderEncoder.setBindGroup(m_QuadBindGroupIndex, m_QuadBindGroup, 0, nullptr);
-    renderEncoder.draw(4, quads.size(), 0, 0);
+    renderEncoder.draw(4, quads.size(), 0, m_QuadsWritten);
+
+    m_QuadsWritten += quads.size();
 }
 
 float FontAtlas::GetTextWidth(const std::string& text) const

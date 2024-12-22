@@ -22,13 +22,13 @@ void Menu::SetFillColor(Math::Color color)
     m_FillColor = color;
 }
 
-void Menu::Text(const std::string& text, Math::float2 center, Math::float2 extent)
+void Menu::Text(const std::string& text, Math::float2 center, float scale)
 {
     Entity* entity = GetNextEntity();
     entity->name = text;
     entity->flags = (uint16_t)EntityFlags::Text;
     entity->transform.position = center;
-    entity->transform.scale = extent;
+    entity->transform.scale = scale;
     entity->material.color = m_FillColor;
 }
 
