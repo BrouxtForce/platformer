@@ -33,6 +33,8 @@ bool Renderer::Init(SDL_Window* window)
 
     m_Queue = m_Device.getQueue();
 
+    m_ShaderLibrary.Load(m_Device);
+
     m_Format = m_Surface.getPreferredFormat(m_Adapter);
     Resize();
 
@@ -83,6 +85,7 @@ bool Renderer::Init(SDL_Window* window)
     std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", m_Format);
     if (!renderPipeline.has_value())
     {
+        Log::Error("Failed to create quad render pipeline.");
         return false;
     }
     quadRenderPipeline = renderPipeline.value();
@@ -90,14 +93,20 @@ bool Renderer::Init(SDL_Window* window)
     renderPipeline = CreateRenderPipeline("ellipse", m_Format);
     if (!renderPipeline.has_value())
     {
+        Log::Error("Failed to create ellipse render pipeline.");
         return false;
     }
     ellipseRenderPipeline = renderPipeline.value();
 
-    m_FontAtlas.Init(*this, s_FontAtlasWidth, s_FontAtlasHeight);
+    if (!m_FontAtlas.Init(*this, s_FontAtlasWidth, s_FontAtlasHeight))
+    {
+        Log::Error("Failed to init font atlas.");
+        return false;
+    }
     bool success = m_FontAtlas.LoadFont(m_Queue, "assets/fonts/Roboto/Roboto-Regular.ttf", Charset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. "), 32.0f);
     if (!success)
     {
+        Log::Error("Failed to load font.");
         return false;
     }
 
@@ -333,29 +342,14 @@ void Renderer::Resize()
 
 std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, wgpu::TextureFormat format)
 {
-    const std::string vertexEntry = shader + "_vert";
-    const std::string fragmentEntry = shader + "_frag";
-
-    const std::string shaderPath = "shaders/" + shader + ".wgsl";
-    const std::string shaderSource = ReadFile(shaderPath);
-    if (shaderSource.empty())
+    wgpu::ShaderModule shaderModule = m_ShaderLibrary.GetShaderModule(shader);
+    if (!shaderModule)
     {
-        Log::Error("Failed to load shader '" + shaderPath + "'");
+        Log::Error("Shader '" + shader + "' does not exist.");
         return std::nullopt;
     }
-
-    wgpu::ShaderModuleDescriptor shaderModuleDescriptor = {};
-#ifdef WEBGPU_BACKEND_WGPU
-    shaderModuleDescriptor.hintCount = 0;
-    shaderModuleDescriptor.hints = nullptr;
-#endif
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor;
-    wgslDescriptor.chain.next = nullptr;
-    wgslDescriptor.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-    shaderModuleDescriptor.nextInChain = &wgslDescriptor.chain;
-    wgslDescriptor.code = shaderSource.c_str();
-
-    wgpu::ShaderModule shaderModule = m_Device.createShaderModule(shaderModuleDescriptor);
+    const std::string vertexEntry = shader + "_vert";
+    const std::string fragmentEntry = shader + "_frag";
 
     wgpu::RenderPipelineDescriptor pipelineDescriptor;
     const std::string pipelineName = shader + " Render Pipeline";

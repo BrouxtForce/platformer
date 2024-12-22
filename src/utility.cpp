@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "log.hpp"
+
 std::string GetBasePath()
 {
     static const char* basePath = SDL_GetBasePath();
@@ -43,4 +45,24 @@ std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
     SDL_free(data);
 
     return dataVector;
+}
+
+std::vector<std::string> GetFilesInDirectory(const std::string& directory)
+{
+    std::vector<std::string> filenames;
+
+    SDL_EnumerateDirectoryCallback callback = [](void* userData, const char* /* dirname */, const char* filename)
+    {
+        std::vector<std::string>& filenames = *(std::vector<std::string>*)userData;
+        filenames.push_back(filename);
+        return SDL_ENUM_CONTINUE;
+    };
+
+    bool success = SDL_EnumerateDirectory((GetBasePath() + directory).c_str(), callback, &filenames);
+    if (!success)
+    {
+        Log::Error(SDL_GetError());
+    }
+
+    return filenames;
 }

@@ -48,7 +48,7 @@ FontAtlas::~FontAtlas()
     if (m_Texture) m_Texture.destroy();
 }
 
-void FontAtlas::Init(Renderer& renderer, int width, int height)
+bool FontAtlas::Init(Renderer& renderer, int width, int height)
 {
     m_Width = width;
     m_Height = height;
@@ -144,17 +144,11 @@ void FontAtlas::Init(Renderer& renderer, int width, int height)
 
     wgpu::PipelineLayout pipelineLayout = renderer.m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
-    const std::string shaderSource = ReadFile("shaders/text.wgsl");
-
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor = wgpu::Default;
-    wgslDescriptor.chain.next = nullptr;
-    wgslDescriptor.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-    wgslDescriptor.code = shaderSource.c_str();
-
-    wgpu::ShaderModuleDescriptor shaderModuleDescriptor = wgpu::Default;
-    shaderModuleDescriptor.nextInChain = &wgslDescriptor.chain;
-
-    wgpu::ShaderModule shaderModule = renderer.m_Device.createShaderModule(shaderModuleDescriptor);
+    wgpu::ShaderModule shaderModule = renderer.m_ShaderLibrary.GetShaderModule("text");
+    if (!shaderModule)
+    {
+        return false;
+    }
 
     wgpu::RenderPipelineDescriptor pipelineDescriptor = wgpu::Default;
     pipelineDescriptor.label = "Font Atlas Render Pipeline";
@@ -196,6 +190,8 @@ void FontAtlas::Init(Renderer& renderer, int width, int height)
     pipelineDescriptor.primitive.cullMode = wgpu::CullMode::None;
 
     m_RenderPipeline = renderer.m_Device.createRenderPipeline(pipelineDescriptor);
+
+    return true;
 }
 
 bool FontAtlas::LoadFont(wgpu::Queue queue, const std::string& path, const Charset& charset, float fontSize)

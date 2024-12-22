@@ -39,7 +39,7 @@ public:
     FontAtlas(const FontAtlas&) = delete;
     FontAtlas& operator=(const FontAtlas&) = delete;
 
-    void Init(Renderer& renderer, int width, int height);
+    bool Init(Renderer& renderer, int width, int height);
 
     // Returns true if successful
     bool LoadFont(wgpu::Queue queue, const std::string& path, const Charset& charset, float fontSize);

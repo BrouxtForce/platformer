@@ -31,6 +31,7 @@ add_executable(game
     src/player.cpp
     src/renderer.cpp
     src/scene.cpp
+    src/shader-library.cpp
     src/transform.cpp
     src/utility.cpp
 )

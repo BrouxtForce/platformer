@@ -10,6 +10,7 @@
 #include "buffer.hpp"
 #include "camera.hpp"
 #include "font-atlas.hpp"
+#include "shader-library.hpp"
 
 class Renderer
 {
@@ -44,6 +45,8 @@ private:
     wgpu::Device m_Device;
     wgpu::Queue m_Queue;
     wgpu::Surface m_Surface;
+
+    ShaderLibrary m_ShaderLibrary;
 
     wgpu::TextureFormat m_Format = wgpu::TextureFormat::Undefined;
 
