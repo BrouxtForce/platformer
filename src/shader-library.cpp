@@ -13,10 +13,12 @@ ShaderLibrary::~ShaderLibrary()
 void ShaderLibrary::Load(wgpu::Device device)
 {
     constexpr std::string_view dirname = "shaders/";
+    m_Header = ReadFile((std::string)dirname + (std::string)m_HeaderFilename);
+
     for (const std::string& filename : GetFilesInDirectory((std::string)dirname))
     {
         constexpr std::string_view extension = ".wgsl";
-        if (!filename.ends_with(extension))
+        if (!filename.ends_with(extension) || filename == m_HeaderFilename)
         {
             continue;
         }
@@ -47,6 +49,7 @@ wgpu::ShaderModule ShaderLibrary::LoadShaderModule(wgpu::Device device, const st
     wgslDescriptor.code = shaderSource.c_str();
 
     wgpu::ShaderModuleDescriptor shaderModuleDescriptor = wgpu::Default;
+    shaderModuleDescriptor.label = filepath.c_str();
 #if WEBGPU_BACKEND_WGPU
     shaderModuleDescriptor.hintCount = 0;
     shaderModuleDescriptor.hints = nullptr;
@@ -58,5 +61,5 @@ wgpu::ShaderModule ShaderLibrary::LoadShaderModule(wgpu::Device device, const st
 
 std::string ShaderLibrary::Preprocess(const std::string& source)
 {
-    return source;
+    return source + m_Header;
 }

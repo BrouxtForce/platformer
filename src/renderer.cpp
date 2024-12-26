@@ -260,7 +260,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
                 assert(false);
         }
 
-        renderEncoder.draw(6, 1, 0, 0);
+        renderEncoder.draw(4, 1, 0, 0);
     }
 
     ImGui::Render();
@@ -387,7 +387,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     pipelineDescriptor.fragment = &fragmentState;
     pipelineDescriptor.depthStencil = &depthStencilState;
 
-    pipelineDescriptor.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
+    pipelineDescriptor.primitive.topology = wgpu::PrimitiveTopology::TriangleStrip;
     pipelineDescriptor.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
     pipelineDescriptor.primitive.frontFace = wgpu::FrontFace::CW;
     pipelineDescriptor.primitive.cullMode = wgpu::CullMode::None;

@@ -1,21 +1,3 @@
-struct Material {
-    color: vec3f,
-};
-
-@group(0) @binding(0)
-var<uniform> material: Material;
-
-struct Transform {
-    modelMatrix: mat3x3f,
-    zIndex: u32,
-};
-
-@group(1) @binding(0)
-var<uniform> transform: Transform;
-
-@group(2) @binding(0)
-var<uniform> viewMatrix: mat3x3f;
-
 struct GlyphQuad
 {
     position: vec2f,
@@ -30,18 +12,9 @@ struct TextVertexOut
     @location(0) uv: vec2f,
 };
 
-const QuadPositions: array<vec2f, 4> = array<vec2f, 4>(
-    vec2f(-1, -1),
-    vec2f( 1, -1),
-    vec2f(-1,  1),
-    vec2f( 1,  1)
-);
-
 @group(3) @binding(0) var<storage> glyphs: array<GlyphQuad>;
 @group(3) @binding(1) var fontTexture: texture_2d<f32>;
 @group(3) @binding(2) var fontSampler: sampler;
-
-const U16_MAX = 0x1p16f - 1.0f;
 
 @vertex
 fn text_vert(@builtin(vertex_index) vertexId: u32, @builtin(instance_index) instanceId: u32) -> TextVertexOut {
