@@ -92,6 +92,7 @@ private:
 
     constexpr static int s_FontAtlasWidth = 256;
     constexpr static int s_FontAtlasHeight = 256;
+    constexpr static Charset m_DefaultCharset = Charset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. []");
     FontAtlas m_FontAtlas;
 
     friend class FontAtlas;

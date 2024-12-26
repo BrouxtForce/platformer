@@ -12,11 +12,6 @@
 #include "utility.hpp"
 #include "renderer.hpp"
 
-void Charset::Insert(char c)
-{
-    m_Data[c / 64] |= (uint64_t)1 << (c % 64);
-}
-
 char Charset::PopChar()
 {
     for (int i = 0; i < (int)m_Data.size(); i++)

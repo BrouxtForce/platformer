@@ -21,7 +21,10 @@ public:
         }
     }
 
-    void Insert(char c);
+    constexpr void Insert(char c)
+    {
+        m_Data[c / 64] |= (uint64_t)1 << (c % 64);
+    }
 
     char PopChar();
     size_t size() const;
@@ -63,7 +66,8 @@ private:
 
     wgpu::RenderPipeline m_RenderPipeline;
 
-    static constexpr size_t s_QuadBufferSize = 4096;
+    // TODO: Dynamic buffer resizing?
+    static constexpr size_t s_QuadBufferSize = 16384;
     size_t m_QuadsWritten = 0;
     Buffer m_QuadBuffer;
     wgpu::BindGroup m_QuadBindGroup;

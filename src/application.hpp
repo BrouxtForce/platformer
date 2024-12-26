@@ -8,11 +8,16 @@
 #include "renderer.hpp"
 #include "player.hpp"
 #include "menu.hpp"
+#include "input.hpp"
 
 enum class GameState
 {
-    MainMenu,
-    Game
+    MainMenu_MainMenu = 1 << 0,
+    MainMenu_Controls = 1 << 1,
+
+    Game = 1 << 2,
+
+    MainMenu = MainMenu_MainMenu | MainMenu_Controls
 };
 
 class Application
@@ -25,11 +30,6 @@ public:
     void Exit();
 
     void OnEvent(const SDL_Event& event);
-    void OnKeyDown(const SDL_KeyboardEvent& event);
-    void OnKeyUp(const SDL_KeyboardEvent& event);
-
-    bool IsKeyDown(SDL_Scancode scancode);
-    bool IsKeyPressed(SDL_Scancode scancode);
 
 private:
     static constexpr int WINDOW_WIDTH = 640;
@@ -37,16 +37,16 @@ private:
 
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;
+    Input m_Input;
 
-    GameState m_GameState = GameState::MainMenu;
+    std::array<int, 2> m_ActiveControlRebind = { -1, -1 };
+
+    GameState m_GameState = GameState::MainMenu_MainMenu;
 
     Menu m_Menu;
 
     Scene m_Scene;
     Camera m_Camera;
-
-    std::bitset<SDL_SCANCODE_COUNT> m_KeysDown;
-    std::bitset<SDL_SCANCODE_COUNT> m_KeysPressed;
 
     Player m_Player;
 

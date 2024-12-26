@@ -50,16 +50,9 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* event)
 {
     Application* application = (Application*)state;
     application->OnEvent(*event);
-    switch (event->type)
+    if (event->type == SDL_EVENT_QUIT)
     {
-        case SDL_EVENT_QUIT:
-            return SDL_APP_SUCCESS;
-        case SDL_EVENT_KEY_DOWN:
-            application->OnKeyDown(event->key);
-            break;
-        case SDL_EVENT_KEY_UP:
-            application->OnKeyUp(event->key);
-            break;
+        return SDL_APP_SUCCESS;
     }
     return SDL_APP_CONTINUE;
 }

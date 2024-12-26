@@ -103,7 +103,7 @@ bool Renderer::Init(SDL_Window* window)
         Log::Error("Failed to init font atlas.");
         return false;
     }
-    bool success = m_FontAtlas.LoadFont(m_Queue, "assets/fonts/Roboto/Roboto-Regular.ttf", Charset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789. "), 32.0f);
+    bool success = m_FontAtlas.LoadFont(m_Queue, "assets/fonts/Roboto/Roboto-Regular.ttf", m_DefaultCharset, 32.0f);
     if (!success)
     {
         Log::Error("Failed to load font.");

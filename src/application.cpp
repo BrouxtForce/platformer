@@ -43,52 +43,123 @@ bool Application::Init()
 
 bool Application::Loop(float deltaTime)
 {
-    switch (m_GameState)
+    if ((int)m_GameState & (int)GameState::MainMenu)
     {
-        case GameState::MainMenu:
-            return LoopMainMenu(deltaTime);
-        case GameState::Game:
-            return LoopGame(deltaTime);
-        default:
-            Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
-            return false;
+        return LoopMainMenu(deltaTime);
     }
-    return true;
+    if (m_GameState == GameState::Game)
+    {
+        return LoopGame(deltaTime);
+    }
+    Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
+    return false;
 }
 
 bool Application::LoopMainMenu(float /* deltaTime */)
 {
     m_Renderer.NewFrame();
 
-    Math::float2 mousePosition = 0.0f;
-    SDL_MouseButtonFlags flags = SDL_GetMouseState(&mousePosition.x, &mousePosition.y);
-
+    Math::float2 mousePosition = m_Input.GetMousePosition();
     mousePosition /= Math::float2(m_Renderer.GetWidth(), m_Renderer.GetHeight());
     mousePosition = mousePosition * 2.0f - 1.0f;
     mousePosition *= { (float)m_Renderer.GetWidth() / m_Renderer.GetHeight(), -1.0f };
 
-    m_Menu.Begin(mousePosition, (bool)(flags & SDL_BUTTON_LMASK));
+    m_Menu.Begin(mousePosition, m_Input.IsMousePressed());
 
     m_Menu.SetBackgroundColor({ 0.2, 0.2, 0.2 });
     m_Menu.SetFillColor({ 0.5, 0.5, 0.5 });
 
-    m_Menu.Text("Untitled Platformer", { 0.0f, 0.5f }, 0.1f);
-
     const Math::float2 buttonSize = { 0.5f, 0.07f };
     const Math::float2 buttonPadding = { 0.0f, 0.05f };
-    if (m_Menu.Button("Start Game", { 0.0f, 0.05f }, buttonSize, buttonPadding))
-    {
-        m_GameState = GameState::Game;
-    }
-
-    // TODO: Settings menu
-    m_Menu.Button("Settings", { 0.0f, -0.25f }, buttonSize, buttonPadding);
 
     bool shouldExit = false;
-    if (m_Menu.Button("Exit Game", { 0.0f, -0.55f }, buttonSize, buttonPadding))
+    switch (m_GameState)
     {
-        shouldExit = true;
+        case GameState::MainMenu_MainMenu:
+            m_Menu.Text("Untitled Platformer", { 0.0f, 0.5f }, 0.1f);
+            if (m_Menu.Button("Start Game", { 0.0f, 0.05f }, buttonSize, buttonPadding))
+            {
+                m_GameState = GameState::Game;
+            }
+            if (m_Menu.Button("Controls", { 0.0f, -0.25f }, buttonSize, buttonPadding))
+            {
+                m_GameState = GameState::MainMenu_Controls;
+            }
+            if (m_Menu.Button("Exit Game", { 0.0f, -0.55f }, buttonSize, buttonPadding))
+            {
+                shouldExit = true;
+            }
+            break;
+        case GameState::MainMenu_Controls:
+            m_Menu.Text("Controls", { 0.0f, 0.75f }, 0.1f);
+            m_Menu.Text("Click a on key binding to change it.", { 0.0f, 0.57f }, 0.035f);
+            m_Menu.Text("Enter ESCAPE to reset a binding.",     { 0.0f, 0.49f }, 0.035f);
+            for (int i = 0; i < (int)m_Input.controls.size(); i++)
+            {
+                float y = (float)(2 - i) * 0.17f;
+                m_Menu.Text((std::string)KeyNames[i], { -0.8f, y }, 0.06f);
+                for (int j = 0; j < (int)m_Input.controls[i].size(); j++)
+                {
+                    bool selected = i == m_ActiveControlRebind[0] && j == m_ActiveControlRebind[1];
+                    if (selected && m_Input.GetFirstKeyPressed() != SDL_SCANCODE_UNKNOWN)
+                    {
+                        if (m_Input.GetFirstKeyPressed() == SDL_SCANCODE_ESCAPE)
+                        {
+                            m_Input.controls[i][j] = SDL_SCANCODE_UNKNOWN;
+                        }
+                        else {
+                            m_Input.controls[i][j] = m_Input.GetFirstKeyPressed();
+                        }
+                        selected = false;
+                        m_ActiveControlRebind = { -1, -1 };
+                    }
+
+                    SDL_Scancode scancode = m_Input.controls[i][j];
+                    SDL_Keycode keycode = SDL_GetKeyFromScancode(scancode, 0, true);
+                    const char* keyName = nullptr;
+                    if (selected)
+                    {
+                        keyName = "[Press any key]";
+                    }
+                    else
+                    {
+                        switch (keycode)
+                        {
+                            case SDLK_MINUS:        keyName = "Minus";         break;
+                            case SDLK_EQUALS:       keyName = "Equals";        break;
+                            case SDLK_LEFTBRACKET:  keyName = "Left Bracket";  break;
+                            case SDLK_RIGHTBRACKET: keyName = "Right Bracket"; break;
+                            case SDLK_BACKSLASH:    keyName = "Backslash";     break;
+                            case SDLK_HASH:         keyName = "Hashtag";       break;
+                            case SDLK_SEMICOLON:    keyName = "Semicolon";     break;
+                            case SDLK_APOSTROPHE:   keyName = "Apostrophe";    break;
+                            case SDLK_GRAVE:        keyName = "Backtick";      break;
+                            case SDLK_COMMA:        keyName = "Comma";         break;
+                            case SDLK_PERIOD:       keyName = "Period";        break;
+                            case SDLK_SLASH:        keyName = "Forward Slash"; break;
+                            default: keyName = SDL_GetKeyName(keycode);
+                        }
+                    }
+
+                    float x = (float)j * 0.5f - 0.3f;
+                    if (m_Menu.Button(keyName, { x, y }, { 0.23f, 0.03f }, { 0.0f, 0.03f }))
+                    {
+                        m_ActiveControlRebind = { i, j };
+                    }
+                }
+            }
+            if (m_Menu.Button("Back", { 0.0f, -0.7f }, buttonSize, buttonPadding))
+            {
+                m_GameState = GameState::MainMenu_MainMenu;
+                m_ActiveControlRebind = { -1, -1 };
+            }
+            break;
+        default:
+            Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
+            break;
     }
+
+    m_Input.EndFrame();
 
     ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
 
@@ -105,15 +176,10 @@ bool Application::LoopGame(float deltaTime)
 
     m_Renderer.NewFrame();
 
-    Math::float2 input = 0.0f;
-    if (IsKeyDown(SDL_SCANCODE_W)) input.y += 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_A)) input.x -= 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_S)) input.y -= 1.0f;
-    if (IsKeyDown(SDL_SCANCODE_D)) input.x += 1.0f;
-    m_Player.Move(m_Scene, input, IsKeyPressed(SDL_SCANCODE_W) || IsKeyPressed(SDL_SCANCODE_SPACE));
+    m_Player.Move(m_Scene, m_Input.Joystick(), m_Input.IsKeyPressed(Key::Jump));
     m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
 
-    m_KeysPressed.reset();
+    m_Input.EndFrame();
 
     ImGui::Text("CPU: %fms", frameTime);
     ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);
@@ -148,32 +214,5 @@ void Application::Exit()
 void Application::OnEvent(const SDL_Event& event)
 {
     ImGui_ImplSDL3_ProcessEvent(&event);
-}
-
-void Application::OnKeyDown(const SDL_KeyboardEvent& event)
-{
-    assert(event.scancode >= 0 && event.scancode <= m_KeysDown.size());
-    if (!event.repeat)
-    {
-        m_KeysDown[event.scancode] = 1;
-        m_KeysPressed[event.scancode] = 1;
-    }
-}
-
-void Application::OnKeyUp(const SDL_KeyboardEvent& event)
-{
-    assert(event.scancode >= 0 && event.scancode <= m_KeysDown.size());
-    m_KeysDown[event.scancode] = 0;
-}
-
-bool Application::IsKeyDown(SDL_Scancode scancode)
-{
-    assert(scancode >= 0 && scancode <= m_KeysDown.size());
-    return m_KeysDown[scancode];
-}
-
-bool Application::IsKeyPressed(SDL_Scancode scancode)
-{
-    assert(scancode >= 0 && scancode < m_KeysPressed.size());
-    return m_KeysPressed[scancode];
+    m_Input.OnEvent(event);
 }
