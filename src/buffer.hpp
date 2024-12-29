@@ -27,6 +27,7 @@ public:
 
     bool IsEmpty() const;
     wgpu::Buffer get() const;
+    uint32_t Size() const;
 
 private:
     wgpu::Buffer m_Buffer;

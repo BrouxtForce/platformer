@@ -98,6 +98,12 @@ bool Renderer::Init(SDL_Window* window)
     }
     ellipseRenderPipeline = renderPipeline.value();
 
+    if (!m_Lighting.Init(m_Device, m_ShaderLibrary))
+    {
+        Log::Error("Failed to init lighting.");
+        return false;
+    }
+
     if (!m_FontAtlas.Init(*this, s_FontAtlasWidth, s_FontAtlasHeight))
     {
         Log::Error("Failed to init font atlas.");
@@ -262,6 +268,17 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
         renderEncoder.draw(4, 1, 0, 0);
     }
+    renderEncoder.end();
+    renderEncoder.release();
+
+    m_Lighting.Render(m_Queue, commandEncoder, textureView);
+    for (wgpu::TextureView view : m_Lighting.m_CascadeTextureSliceViews)
+    {
+        ImGui::Image(view, ImVec2(256, 256));
+    }
+
+    renderPassColorAttachment.loadOp = wgpu::LoadOp::Load;
+    renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     ImGui::Render();
     ImDrawData* drawData = ImGui::GetDrawData();

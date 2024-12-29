@@ -74,3 +74,8 @@ wgpu::Buffer Buffer::get() const
 {
     return m_Buffer;
 }
+
+uint32_t Buffer::Size() const
+{
+    return m_Size;
+}

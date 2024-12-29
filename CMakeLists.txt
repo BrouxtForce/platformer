@@ -24,6 +24,7 @@ add_executable(game
     src/camera.cpp
     src/font-atlas.cpp
     src/input.cpp
+    src/lighting.cpp
     src/log.cpp
     src/main.cpp
     src/math.cpp

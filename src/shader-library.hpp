@@ -10,9 +10,12 @@ public:
     ShaderLibrary() = default;
     ~ShaderLibrary();
 
+    ShaderLibrary(const ShaderLibrary&) = delete;
+    ShaderLibrary& operator=(const ShaderLibrary&) = delete;
+
     void Load(wgpu::Device device);
 
-    wgpu::ShaderModule GetShaderModule(const std::string& name);
+    wgpu::ShaderModule GetShaderModule(const std::string& name) const;
 
 private:
     static constexpr std::string_view m_HeaderFilename = "header.wgsl";

@@ -11,6 +11,7 @@
 #include "camera.hpp"
 #include "font-atlas.hpp"
 #include "shader-library.hpp"
+#include "lighting.hpp"
 
 class Renderer
 {
@@ -89,6 +90,8 @@ private:
 
     Buffer m_CameraBuffer;
     wgpu::BindGroup m_CameraBindGroup;
+
+    Lighting m_Lighting;
 
     constexpr static int s_FontAtlasWidth = 256;
     constexpr static int s_FontAtlasHeight = 256;

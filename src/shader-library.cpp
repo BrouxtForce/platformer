@@ -29,7 +29,7 @@ void ShaderLibrary::Load(wgpu::Device device)
     }
 }
 
-wgpu::ShaderModule ShaderLibrary::GetShaderModule(const std::string& name)
+wgpu::ShaderModule ShaderLibrary::GetShaderModule(const std::string& name) const
 {
     auto it = m_ShaderModuleMap.find(name);
     if (it == m_ShaderModuleMap.end())

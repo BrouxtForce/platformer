@@ -1,9 +1,5 @@
 #include "application.hpp"
 
-#if __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 
