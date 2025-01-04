@@ -16,7 +16,9 @@
 #include <webgpu/webgpu.hpp>
 
 #include "buffer.hpp"
-#include "shader-library.hpp"
+#include "jump-flood.hpp"
+
+class ShaderLibrary;
 
 class Lighting
 {
@@ -24,19 +26,28 @@ public:
     Lighting() = default;
     ~Lighting();
 
+    Lighting(const Lighting&) = delete;
+    Lighting& operator=(const Lighting&) = delete;
+
     bool Init(wgpu::Device device, const ShaderLibrary& shaderLibrary);
+
+    void FitToScreen(int width, int height);
 
     void Render(wgpu::Queue& queue, wgpu::CommandEncoder& commandEncoder, wgpu::TextureView framebuffer);
 
 private:
-    uint16_t m_Width = 512;
-    uint16_t m_Height = 512;
+    uint16_t m_Width = 0;
+    uint16_t m_Height = 0;
 
+    wgpu::Device m_Device;
     wgpu::ShaderModule m_ShaderModule;
 
-    constexpr static int s_NumCascades = 4;
+    JumpFlood m_JumpFlood;
+
+    constexpr static int s_NumCascades = 6;
     constexpr static WGPUTextureFormat s_CascadeTextureFormat = WGPUTextureFormat_RGB10A2Unorm;
     wgpu::Texture m_CascadeTexture;
+    // TODO: Texture ping-ponging, which would only require two textures for N cascades
     std::array<wgpu::TextureView, s_NumCascades> m_CascadeTextureSliceViews;
     wgpu::TextureView m_CascadeTextureView;
 
@@ -69,14 +80,18 @@ private:
     std::array<wgpu::BindGroup, s_NumCascades> m_CascadeBindGroups;
 
     wgpu::RenderPipeline m_CascadeRenderPipeline;
-    wgpu::RenderPipeline m_RadianceRenderPipeline;
     wgpu::RenderPipeline m_LightingRenderPipeline;
 
-    void InitTextures(wgpu::Device device);
-    void InitSamplers(wgpu::Device device);
-    void InitBuffers(wgpu::Device device);
-    void InitBindGroups(wgpu::Device device);
-    void InitRenderPipelines(wgpu::Device device);
+    void InitTextures();
+    void InitSamplers();
+    void InitBuffers();
+    void InitBindGroupLayouts();
+    void InitBindGroups();
+    void InitRenderPipelines();
+
+    void DestroyTextures();
+    void DestroyBindGroups();
+    void Resize(int width, int height);
 
     friend class Renderer;
 };

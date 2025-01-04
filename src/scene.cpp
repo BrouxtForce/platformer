@@ -29,12 +29,19 @@ struct GravityZoneDescriptor
     float maxAngle;
 };
 
+struct LightDescriptor
+{
+    Transform transform;
+    Math::Color color;
+};
+
 struct SceneDescription
 {
     std::string name;
     Math::Color backgroundColor;
     std::vector<Collider> colliders;
     std::vector<GravityZoneDescriptor> gravityZones;
+    std::vector<LightDescriptor> lights;
     uint64_t seed;
 };
 
@@ -60,6 +67,12 @@ static std::array<SceneDescription, 1> s_SceneDescriptions = {
             { Transform(Math::float2(0.0f, -1.5f),  Math::float2(1.5f)), -M_PI_2, 0.0f },
             { Transform(Math::float2(-2.0f, -1.5f), Math::float2(1.5f)), -M_PI, -M_PI_2 },
             { Transform(Math::float2(-2.0f, 1.5f),  Math::float2(1.5f)), M_PI_2, M_PI }
+        },
+        .lights = {
+            { Transform(Math::float2(0.0f, 1.0f), Math::float2(0.1f)), Math::Color(1, 1, 1) },
+            { Transform(Math::float2(-1.0f, 0.8f), Math::float2(0.1f)), Math::Color(1, 0, 1) },
+            { Transform(Math::float2(1.0f, -0.4f), Math::float2(0.1f)), Math::Color(1, 1, 0) },
+            { Transform(Math::float2(0.0f, 0.4f), Math::float2(0.1f)), Math::Color(0, 1, 1) }
         },
         .seed = 892542184
     }
@@ -96,6 +109,16 @@ void Scene::Load(int index)
             .minAngle = zone.minAngle,
             .maxAngle = zone.maxAngle
         };
+    }
+
+    for (const LightDescriptor& light : description.lights)
+    {
+        Entity* entity = CreateEntity();
+        entity->transform = light.transform;
+        entity->flags = (uint16_t)EntityFlags::Light;
+        entity->material.color = light.color;
+        entity->shape = Shape::Ellipse;
+        entity->zIndex = 4;
     }
 
     constexpr int NUM_BUILDINGS = 15;

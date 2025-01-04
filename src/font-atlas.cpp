@@ -173,7 +173,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     pipelineDescriptor.fragment = &fragmentState;
 
     wgpu::DepthStencilState depthStencilState = wgpu::Default;
-    depthStencilState.format = renderer.m_DepthStencilFormat;
+    depthStencilState.format = renderer.s_DepthStencilFormat;
     depthStencilState.depthWriteEnabled = false;
     depthStencilState.stencilReadMask = 0;
     depthStencilState.stencilWriteMask = 0;

@@ -9,8 +9,6 @@
 #include "utility.hpp"
 #include "log.hpp"
 
-wgpu::TextureFormat Renderer::m_DepthStencilFormat = wgpu::TextureFormat::Depth16Unorm;
-
 bool Renderer::Init(SDL_Window* window)
 {
     m_Window = window;
@@ -36,7 +34,6 @@ bool Renderer::Init(SDL_Window* window)
     m_ShaderLibrary.Load(m_Device);
 
     m_Format = m_Surface.getPreferredFormat(m_Adapter);
-    Resize();
 
     // Material bind group layout
     wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
@@ -82,21 +79,37 @@ bool Renderer::Init(SDL_Window* window)
     pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)m_BindGroupLayouts.data();
     m_PipelineLayout = m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
-    std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", m_Format);
+    std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", true, m_Format);
     if (!renderPipeline.has_value())
     {
         Log::Error("Failed to create quad render pipeline.");
         return false;
     }
-    quadRenderPipeline = renderPipeline.value();
+    m_QuadRenderPipeline = renderPipeline.value();
 
-    renderPipeline = CreateRenderPipeline("ellipse", m_Format);
+    renderPipeline = CreateRenderPipeline("ellipse", true, m_Format);
     if (!renderPipeline.has_value())
     {
         Log::Error("Failed to create ellipse render pipeline.");
         return false;
     }
-    ellipseRenderPipeline = renderPipeline.value();
+    m_EllipseRenderPipeline = renderPipeline.value();
+
+    renderPipeline = CreateRenderPipeline("quad", false, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create ellipse render pipeline.");
+        return false;
+    }
+    m_QuadLightRenderPipeline = renderPipeline.value();
+
+    renderPipeline = CreateRenderPipeline("ellipse", false, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create ellipse render pipeline.");
+        return false;
+    }
+    m_EllipseLightRenderPipeline = renderPipeline.value();
 
     if (!m_Lighting.Init(m_Device, m_ShaderLibrary))
     {
@@ -116,6 +129,8 @@ bool Renderer::Init(SDL_Window* window)
         return false;
     }
 
+    Resize();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui_ImplSDL3_InitForOther(window);
@@ -127,7 +142,7 @@ bool Renderer::Init(SDL_Window* window)
     ImGui_ImplWGPU_InitInfo wgpuInitInfo{};
     wgpuInitInfo.Device = m_Device;
     wgpuInitInfo.RenderTargetFormat = m_Format;
-    wgpuInitInfo.DepthStencilFormat = m_DepthStencilFormat;
+    wgpuInitInfo.DepthStencilFormat = s_DepthStencilFormat;
 
     ImGui_ImplWGPU_Init(&wgpuInitInfo);
 
@@ -175,17 +190,22 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
     renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
     Math::Color clearColor = scene.properties.backgroundColor;
-    renderPassColorAttachment.clearValue = wgpu::Color{ clearColor.r, clearColor.g, clearColor.b, clearColor.a };
+    renderPassColorAttachment.clearValue = wgpu::Color{ clearColor.r, clearColor.g, clearColor.b, 0.0f };
 #ifndef WEBGPU_BACKEND_WGPU
     renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
 
-    wgpu::RenderPassDepthStencilAttachment renderPassDepthStencilAttachment = wgpu::Default;
-    renderPassDepthStencilAttachment.view = m_DepthTextureView;
-    renderPassDepthStencilAttachment.depthClearValue = 0.0f;
-    renderPassDepthStencilAttachment.depthLoadOp = wgpu::LoadOp::Clear;
-    renderPassDepthStencilAttachment.depthStoreOp = wgpu::StoreOp::Store;
-    renderPassDepthStencilAttachment.depthReadOnly = false;
+    WGPURenderPassDepthStencilAttachment renderPassDepthStencilAttachment {
+        .view = m_DepthTextureView,
+        .depthLoadOp = wgpu::LoadOp::Clear,
+        .depthStoreOp = wgpu::StoreOp::Store,
+        .depthClearValue = 0.0f,
+        .depthReadOnly = false,
+        .stencilLoadOp = wgpu::LoadOp::Undefined,
+        .stencilStoreOp = wgpu::StoreOp::Undefined,
+        .stencilClearValue = 0,
+        .stencilReadOnly = true
+    };
 
     wgpu::RenderPassDescriptor renderPassDescriptor;
     renderPassDescriptor.nextInChain = nullptr;
@@ -212,30 +232,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         if (drawData.empty)
         {
             Log::Debug("Create entity draw data (" + std::to_string(entity->id) + ")");
-
-            drawData.empty = false;
-
-            drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
-            drawData.transformBuffer = Buffer(m_Device, sizeof(TransformBindGroupData), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
-
-            wgpu::BindGroupEntry binding;
-            binding.binding = 0;
-            binding.buffer = drawData.materialBuffer.get();
-            binding.offset = 0;
-            binding.size = sizeof(Material);
-
-            wgpu::BindGroupDescriptor bindGroupDescriptor{};
-            bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_MATERIAL_INDEX];
-            bindGroupDescriptor.entryCount = 1;
-            bindGroupDescriptor.entries = &binding;
-
-            drawData.materialBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
-
-            bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
-            binding.buffer = drawData.transformBuffer.get();
-            binding.size = sizeof(TransformBindGroupData);
-
-            drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+            CreateDrawData(drawData);
         }
         TransformBindGroupData transformData {
             .transform = entity->transform.GetMatrix(),
@@ -257,10 +254,10 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         switch (entity->shape)
         {
             case Shape::Rectangle:
-                renderEncoder.setPipeline(quadRenderPipeline);
+                renderEncoder.setPipeline(m_QuadRenderPipeline);
                 break;
             case Shape::Ellipse:
-                renderEncoder.setPipeline(ellipseRenderPipeline);
+                renderEncoder.setPipeline(m_EllipseRenderPipeline);
                 break;
             default:
                 assert(false);
@@ -271,7 +268,10 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     renderEncoder.end();
     renderEncoder.release();
 
+    RenderLighting(commandEncoder, m_Lighting.m_RadianceTextureView, scene, camera);
     m_Lighting.Render(m_Queue, commandEncoder, textureView);
+    ImGui::Image(m_Lighting.m_JumpFlood.GetSDFTextureView(), ImVec2(256, 256));
+    ImGui::Image(m_Lighting.m_RadianceTextureView, ImVec2(256, 256));
     for (wgpu::TextureView view : m_Lighting.m_CascadeTextureSliceViews)
     {
         ImGui::Image(view, ImVec2(256, 256));
@@ -302,6 +302,71 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     return true;
 }
 
+void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::TextureView& textureView, const Scene& scene, const Camera& camera)
+{
+    wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
+    renderPassColorAttachment.view = textureView;
+    renderPassColorAttachment.resolveTarget = nullptr;
+    renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
+    renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
+    renderPassColorAttachment.clearValue = wgpu::Color{ 0.0f, 0.0f, 0.0f, 0.0f };
+#ifndef WEBGPU_BACKEND_WGPU
+    renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
+
+    wgpu::RenderPassDescriptor renderPassDescriptor;
+    renderPassDescriptor.nextInChain = nullptr;
+    renderPassDescriptor.colorAttachmentCount = 1;
+    renderPassDescriptor.colorAttachments = &renderPassColorAttachment;
+    renderPassDescriptor.depthStencilAttachment = nullptr;
+    renderPassDescriptor.timestampWrites = nullptr;
+
+    wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+
+    Math::Matrix3x3 viewMatrix = camera.GetMatrix();
+    m_CameraBuffer.Write(m_Queue, viewMatrix);
+    renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
+
+    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    {
+        if ((entity->flags & (uint16_t)EntityFlags::Light) == 0)
+        {
+            continue;
+        }
+
+        DrawData& drawData = m_EntityDrawData[entity->id];
+        if (drawData.empty)
+        {
+            Log::Debug("Create entity draw data (" + std::to_string(entity->id) + ")");
+            CreateDrawData(drawData);
+        }
+        TransformBindGroupData transformData {
+            .transform = entity->transform.GetMatrix(),
+            .zIndex = entity->zIndex
+        };
+        drawData.materialBuffer.Write(m_Queue, entity->material);
+        drawData.transformBuffer.Write(m_Queue, transformData);
+        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
+        renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
+
+        switch (entity->shape)
+        {
+            case Shape::Rectangle:
+                renderEncoder.setPipeline(m_QuadLightRenderPipeline);
+                break;
+            case Shape::Ellipse:
+                renderEncoder.setPipeline(m_EllipseLightRenderPipeline);
+                break;
+            default:
+                assert(false);
+        }
+
+        renderEncoder.draw(4, 1, 0, 0);
+    }
+    renderEncoder.end();
+    renderEncoder.release();
+}
+
 void Renderer::Resize()
 {
     int newWidth, newHeight;
@@ -322,7 +387,8 @@ void Renderer::Resize()
     surfaceConfig.height = m_Height;
     surfaceConfig.viewFormatCount = 0;
     surfaceConfig.viewFormats = nullptr;
-    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    // TODO: Render to offscreen texture before blitting to the framebuffer
+    surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding;
     surfaceConfig.device = m_Device;
     surfaceConfig.presentMode = wgpu::PresentMode::Fifo;
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
@@ -337,7 +403,7 @@ void Renderer::Resize()
 
     wgpu::TextureDescriptor depthTextureDescriptor;
     depthTextureDescriptor.dimension = wgpu::TextureDimension::_2D;
-    depthTextureDescriptor.format = m_DepthStencilFormat;
+    depthTextureDescriptor.format = s_DepthStencilFormat;
     depthTextureDescriptor.mipLevelCount = 1;
     depthTextureDescriptor.sampleCount = 1;
     depthTextureDescriptor.size.width = m_Width;
@@ -345,7 +411,7 @@ void Renderer::Resize()
     depthTextureDescriptor.size.depthOrArrayLayers = 1;
     depthTextureDescriptor.usage = wgpu::TextureUsage::RenderAttachment;
     depthTextureDescriptor.viewFormatCount = 1;
-    depthTextureDescriptor.viewFormats = (WGPUTextureFormat*)&m_DepthStencilFormat;
+    depthTextureDescriptor.viewFormats = (WGPUTextureFormat*)&s_DepthStencilFormat;
     m_DepthTexture = m_Device.createTexture(depthTextureDescriptor);
 
     wgpu::TextureViewDescriptor depthTextureViewDescriptor;
@@ -355,11 +421,13 @@ void Renderer::Resize()
     depthTextureViewDescriptor.baseMipLevel = 0;
     depthTextureViewDescriptor.mipLevelCount = 1;
     depthTextureViewDescriptor.dimension = wgpu::TextureViewDimension::_2D;
-    depthTextureViewDescriptor.format = m_DepthStencilFormat;
+    depthTextureViewDescriptor.format = s_DepthStencilFormat;
     m_DepthTextureView = m_DepthTexture.createView(depthTextureViewDescriptor);
+
+    m_Lighting.FitToScreen(m_Width, m_Height);
 }
 
-std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, wgpu::TextureFormat format)
+std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, bool depthStencil, wgpu::TextureFormat format)
 {
     wgpu::ShaderModule shaderModule = m_ShaderLibrary.GetShaderModule(shader);
     if (!shaderModule)
@@ -370,50 +438,73 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const std::string vertexEntry = shader + "_vert";
     const std::string fragmentEntry = shader + "_frag";
 
-    wgpu::RenderPipelineDescriptor pipelineDescriptor;
     const std::string pipelineName = shader + " Render Pipeline";
-    pipelineDescriptor.label = pipelineName.c_str();
 
-    pipelineDescriptor.vertex.bufferCount = 0;
-    pipelineDescriptor.vertex.buffers = nullptr;
-    pipelineDescriptor.vertex.module = shaderModule;
-    pipelineDescriptor.vertex.entryPoint = vertexEntry.c_str();
-    pipelineDescriptor.vertex.constantCount = 0;
-    pipelineDescriptor.vertex.constants = nullptr;
+    WGPUColorTargetState colorTarget {
+        .nextInChain = nullptr,
+        .format = format,
+        .blend = nullptr,
+        .writeMask = wgpu::ColorWriteMask::All
+    };
 
-    wgpu::FragmentState fragmentState;
-    fragmentState.module = shaderModule;
-    fragmentState.entryPoint = fragmentEntry.c_str();
-    fragmentState.constantCount = 0;
-    fragmentState.constants = nullptr;
+    WGPUFragmentState fragmentState {
+        .nextInChain = nullptr,
+        .module = shaderModule,
+        .entryPoint = fragmentEntry.c_str(),
+        .constantCount = 0,
+        .constants = nullptr,
+        .targetCount = 1,
+        .targets = &colorTarget
+    };
 
-    wgpu::ColorTargetState colorTarget;
-    colorTarget.format = format;
-    colorTarget.blend = nullptr;
-    colorTarget.writeMask = wgpu::ColorWriteMask::All;
-    fragmentState.targetCount = 1;
-    fragmentState.targets = &colorTarget;
+    WGPUDepthStencilState depthStencilState {
+        .nextInChain = nullptr,
+        .format = s_DepthStencilFormat,
+        .depthWriteEnabled = true,
+        .depthCompare = wgpu::CompareFunction::Greater,
+        .stencilFront = {},
+        .stencilBack = {},
+        .stencilReadMask = 0,
+        .stencilWriteMask = 0,
+        .depthBias = 0,
+        .depthBiasSlopeScale = 0.0f,
+        .depthBiasClamp = 0.0f
+    };
 
-    wgpu::DepthStencilState depthStencilState = wgpu::Default;
-    depthStencilState.depthCompare = wgpu::CompareFunction::Greater;
-    depthStencilState.depthWriteEnabled = true;
-    depthStencilState.format = m_DepthStencilFormat;
-    depthStencilState.stencilReadMask = 0;
-    depthStencilState.stencilWriteMask = 0;
+    WGPURenderPipelineDescriptor pipelineDescriptor {
+        .nextInChain = nullptr,
+        .label = pipelineName.c_str(),
+        .layout = m_PipelineLayout,
+        .vertex = {
+            .nextInChain = nullptr,
+            .module = shaderModule,
+            .entryPoint = vertexEntry.c_str(),
+            .constantCount = 0,
+            .constants = nullptr,
+            .bufferCount = 0,
+            .buffers = nullptr
+        },
+        .primitive = {
+            .nextInChain = nullptr,
+            .topology = wgpu::PrimitiveTopology::TriangleStrip,
+            .stripIndexFormat = wgpu::IndexFormat::Undefined,
+            .frontFace = wgpu::FrontFace::Undefined,
+            .cullMode = wgpu::CullMode::None
+        },
+        .depthStencil = &depthStencilState,
+        .multisample = {
+            .nextInChain = nullptr,
+            .count = 1,
+            .mask = ~(uint32_t)0,
+            .alphaToCoverageEnabled = false
+        },
+        .fragment = &fragmentState
+    };
 
-    pipelineDescriptor.fragment = &fragmentState;
-    pipelineDescriptor.depthStencil = &depthStencilState;
-
-    pipelineDescriptor.primitive.topology = wgpu::PrimitiveTopology::TriangleStrip;
-    pipelineDescriptor.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
-    pipelineDescriptor.primitive.frontFace = wgpu::FrontFace::CW;
-    pipelineDescriptor.primitive.cullMode = wgpu::CullMode::None;
-
-    pipelineDescriptor.multisample.count = 1;
-    pipelineDescriptor.multisample.mask = ~0u;
-    pipelineDescriptor.multisample.alphaToCoverageEnabled = false;
-
-    pipelineDescriptor.layout = m_PipelineLayout;
+    if (!depthStencil)
+    {
+        pipelineDescriptor.depthStencil = nullptr;
+    }
 
     return m_Device.createRenderPipeline(pipelineDescriptor);
 }
@@ -506,4 +597,32 @@ bool Renderer::LoadDeviceSync()
     });
 
     return true;
+}
+
+void Renderer::CreateDrawData(DrawData& drawData)
+{
+    assert(drawData.empty);
+    drawData.empty = false;
+
+    drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+    drawData.transformBuffer = Buffer(m_Device, sizeof(TransformBindGroupData), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+
+    wgpu::BindGroupEntry binding;
+    binding.binding = 0;
+    binding.buffer = drawData.materialBuffer.get();
+    binding.offset = 0;
+    binding.size = sizeof(Material);
+
+    wgpu::BindGroupDescriptor bindGroupDescriptor{};
+    bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_MATERIAL_INDEX];
+    bindGroupDescriptor.entryCount = 1;
+    bindGroupDescriptor.entries = &binding;
+
+    drawData.materialBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+
+    bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
+    binding.buffer = drawData.transformBuffer.get();
+    binding.size = sizeof(TransformBindGroupData);
+
+    drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
 }

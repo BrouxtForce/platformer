@@ -22,7 +22,8 @@ enum class EntityFlags : uint16_t
     Collider    = 1 << 0,
     GravityZone = 1 << 1,
     Text        = 1 << 2,
-    Hidden      = 1 << 3
+    Hidden      = 1 << 3,
+    Light       = 1 << 4
 };
 
 struct GravityZone

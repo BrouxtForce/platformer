@@ -10,6 +10,7 @@ struct CascadeUniforms
     interval_length: f32,
 
     // The number of cascades in total. This value is uniform with the rest of the array
+    // TODO: Remove, this is unnecessary. Just call arrayLength()
     cascade_count: u32,
 
     // The number of pixels in the cascade. This value is uniform with the rest of the array
@@ -19,7 +20,8 @@ struct CascadeUniforms
 @group(0) @binding(0) var<storage> cascade_uniforms_array: array<CascadeUniforms>;
 
 @group(1) @binding(0) var radiance_texture: texture_2d<f32>;
-@group(1) @binding(1) var radiance_sampler: sampler;
+@group(1) @binding(1) var sdf_texture: texture_2d<f32>;
+@group(1) @binding(2) var radiance_sampler: sampler;
 
 @group(2) @binding(0) var cascade_texture: texture_2d<f32>;
 
@@ -47,19 +49,6 @@ fn fullscreen_quad_vert(@builtin(vertex_index) vertex_id: u32, @builtin(instance
     return out;
 }
 
-@fragment
-fn radiance_frag() -> @location(0) vec4f {
-    return vec4f(0, 0, 0, 1);
-}
-
-fn circle_sdf(circle_position: vec2f, circle_radius: f32, ray_position: vec2f) -> f32 {
-    return length(ray_position - circle_position) - circle_radius;
-}
-
-fn scene_sdf(ray_position: vec2f) -> f32 {
-    return circle_sdf(vec2f(0.5, 0.5), 0.1, ray_position);
-}
-
 /*
  * Raymarches into the scene. The return value is the color of the ray, with an alpha
  * value of 1.0f if there was a collision and 0.0f otherwise.
@@ -72,7 +61,8 @@ fn raymarch_scene(ray_position: vec2f, ray_direction: vec2f, ray_length: f32) ->
     var hit = false;
     for (var i = 0; i < MAX_ITERATIONS; i++)
     {
-        let distance = scene_sdf(ray_position + ray_direction * distance_travelled);
+        let current_position: vec2f = ray_position + ray_direction * distance_travelled;
+        let distance: f32 = textureSampleLevel(sdf_texture, radiance_sampler, current_position, 0).r;
         distance_travelled += distance;
 
         if (distance < HIT_DISTANCE)
@@ -86,10 +76,10 @@ fn raymarch_scene(ray_position: vec2f, ray_direction: vec2f, ray_length: f32) ->
         }
     }
 
-    // TODO: Texture sample the radiance texture
-    let radiance = vec3f(1.0f);
     if (hit)
     {
+        let current_position = ray_position + ray_direction * distance_travelled;
+        let radiance: vec3f = textureSampleLevel(radiance_texture, radiance_sampler, current_position, 0).rgb;
         return vec4f(radiance, 0.0f);
     }
     return vec4f(0.0f, 0.0f, 0.0f, 1.0f);
@@ -161,28 +151,25 @@ fn merge_cascades_frag(in: VertexData) -> @location(0) vec4f {
     }
 
     // Merge the upper cascade onto this cascade
+    let cascade_uniforms = cascade_uniforms_array[in.cascade_index + 1];
+    let block_size: vec2u = cascade_uniforms.texture_size / cascade_uniforms.probe_size;
+
+    var radiance = vec4f(0.0f);
+    for (var i: u32 = 0; i < 4; i++)
     {
-        let cascade_uniforms = cascade_uniforms_array[in.cascade_index + 1];
-        let block_size: vec2u = cascade_uniforms.texture_size / cascade_uniforms.probe_size;
+        let upper_cascade_direction_index: u32 = direction_index + i;
+        let block_x: u32 = upper_cascade_direction_index % cascade_uniforms.probe_size;
+        let block_y: u32 = upper_cascade_direction_index / cascade_uniforms.probe_size;
 
-        var radiance = vec4f(0.0f);
-        for (var i: u32 = 0; i < 4; i++)
-        {
-            let upper_cascade_direction_index: u32 = direction_index + i;
-            let block_x: u32 = upper_cascade_direction_index % cascade_uniforms.probe_size;
-            let block_y: u32 = upper_cascade_direction_index / cascade_uniforms.probe_size;
+        let sample_uv =
+            vec2f(f32(block_size.x * block_x), f32(block_size.y * block_y)) / vec2f(cascade_uniforms.texture_size) +
+            vec2f(uv / f32(cascade_uniforms.probe_size));
 
-            let sample_uv =
-                vec2f(f32(block_size.x * block_x), f32(block_size.y * block_y)) / vec2f(cascade_uniforms.texture_size) +
-                vec2f(uv / f32(cascade_uniforms.probe_size));
-
-            let next_interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
-            radiance += merge_intervals(current_interval, next_interval);
-        }
-
-        return radiance / 4.0f;
+        let next_interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
+        radiance += merge_intervals(current_interval, next_interval);
     }
-    return current_interval;
+
+    return radiance / 4.0f;
 }
 
 /*

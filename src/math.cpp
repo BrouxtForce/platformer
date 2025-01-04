@@ -190,4 +190,9 @@ namespace Math
     {
         return float2(std::cos(angle), std::sin(angle));
     }
+
+    int DivideCeil(int dividend, int divisor)
+    {
+        return (dividend + divisor - 1) / divisor;
+    }
 }

@@ -31,7 +31,7 @@ public:
     inline int GetWidth()  { return m_Width; }
     inline int GetHeight() { return m_Height; }
 
-    std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, wgpu::TextureFormat format);
+    std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, bool depthStencil, wgpu::TextureFormat format);
 
     void ImGuiDebugTextures();
 
@@ -51,10 +51,15 @@ private:
 
     wgpu::TextureFormat m_Format = wgpu::TextureFormat::Undefined;
 
-    wgpu::RenderPipeline quadRenderPipeline;
-    wgpu::RenderPipeline ellipseRenderPipeline;
+    wgpu::RenderPipeline m_QuadRenderPipeline;
+    wgpu::RenderPipeline m_EllipseRenderPipeline;
+
+    wgpu::RenderPipeline m_QuadLightRenderPipeline;
+    wgpu::RenderPipeline m_EllipseLightRenderPipeline;
 
     std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
+
+    void RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::TextureView& textureView, const Scene& scene, const Camera& camera);
 
     bool LoadAdapterSync();
     bool LoadDeviceSync();
@@ -72,7 +77,7 @@ private:
     std::array<wgpu::BindGroupLayout, 3> m_BindGroupLayouts;
     wgpu::PipelineLayout m_PipelineLayout;
 
-    static wgpu::TextureFormat m_DepthStencilFormat;
+    constexpr static WGPUTextureFormat s_DepthStencilFormat = WGPUTextureFormat_Depth16Unorm;
     wgpu::Texture m_DepthTexture;
     wgpu::TextureView m_DepthTextureView;
 
@@ -87,6 +92,8 @@ private:
         wgpu::BindGroup transformBindGroup;
     };
     std::unordered_map<uint32_t, DrawData> m_EntityDrawData;
+
+    void CreateDrawData(DrawData& drawData);
 
     Buffer m_CameraBuffer;
     wgpu::BindGroup m_CameraBindGroup;

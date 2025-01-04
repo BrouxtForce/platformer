@@ -97,4 +97,7 @@ namespace Math
     float2 LerpSmooth(float2 a, float2 b, float deltaTime, float halfLifeSeconds);
 
     float2 Direction(float angle);
+
+    // Computes ceil(dividend / divisor)
+    int DivideCeil(int dividend, int divisor);
 }
