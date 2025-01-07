@@ -72,7 +72,7 @@ if (EMSCRIPTEN)
         -sASYNCIFY
         -sENVIRONMENT=web
         --embed-file ${CMAKE_SOURCE_DIR}/shaders@/shaders
-        --preload-file ${CMAKE_SOURCE_DIR}/assets/fonts/Roboto/Roboto-Regular.ttf@/assets/fonts/Roboto/Roboto-Regular.ttf
+        --preload-file ${CMAKE_SOURCE_DIR}/assets@/assets
     )
     target_compile_options(game PRIVATE -O3)
 else()

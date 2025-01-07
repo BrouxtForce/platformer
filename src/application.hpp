@@ -15,7 +15,8 @@ enum class GameState
     MainMenu_MainMenu = 1 << 0,
     MainMenu_Controls = 1 << 1,
 
-    Game = 1 << 2,
+    Game   = 1 << 2,
+    Editor = 1 << 3,
 
     MainMenu = MainMenu_MainMenu | MainMenu_Controls
 };
@@ -25,15 +26,19 @@ class Application
 public:
     Application() = default;
 
-    bool Init();
+    bool Init(GameState startGameState);
     bool Loop(float deltaTime);
     void Exit();
+
+    void LoadScene(const std::string& sceneName);
 
     void OnEvent(const SDL_Event& event);
 
 private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
+
+    static constexpr std::string_view firstSceneFilepath = "assets/scenes/city.txt";
 
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;
@@ -50,6 +55,7 @@ private:
 
     Player m_Player;
 
+    bool LoopEditor(float deltaTime);
     bool LoopMainMenu(float deltaTime);
     bool LoopGame(float deltaTime);
 };

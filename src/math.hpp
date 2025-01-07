@@ -87,6 +87,7 @@ namespace Math
     float Length(float2 in);
     float LengthSquared(float2 in);
     float Distance(float2 a, float2 b);
+    float DistanceSquared(float2 a, float2 b);
     float Dot(float2 a, float2 b);
     float2 Normalize(float2 in);
 

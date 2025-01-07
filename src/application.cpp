@@ -2,11 +2,13 @@
 
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
+#include <imgui_stdlib.h>
 
 #include "physics.hpp"
 #include "log.hpp"
+#include "utility.hpp"
 
-bool Application::Init()
+bool Application::Init(GameState startGameState)
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -25,20 +27,18 @@ bool Application::Init()
         return false;
     }
 
-    m_Scene.Load(Scene::City);
-
-    Entity* playerEntity = m_Scene.CreateEntity();
-    playerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
-    playerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
-    playerEntity->transform.scale = Math::float2(0.1);
-    playerEntity->shape = Shape::Ellipse;
-    m_Player = Player(playerEntity);
+    LoadScene((std::string)firstSceneFilepath);
+    m_GameState = startGameState;
 
     return true;
 }
 
 bool Application::Loop(float deltaTime)
 {
+    if (m_GameState == GameState::Editor)
+    {
+        return LoopEditor(deltaTime);
+    }
     if ((int)m_GameState & (int)GameState::MainMenu)
     {
         return LoopMainMenu(deltaTime);
@@ -49,6 +49,140 @@ bool Application::Loop(float deltaTime)
     }
     Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
     return false;
+}
+
+void Application::LoadScene(const std::string& sceneFilepath)
+{
+    m_Scene.Clear();
+    m_Scene.Deserialize(ReadFile(sceneFilepath));
+
+    Entity* playerEntity = m_Scene.CreateEntity();
+    playerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
+    playerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
+    playerEntity->transform.scale = Math::float2(0.1);
+    playerEntity->shape = Shape::Ellipse;
+    playerEntity->flags |= (uint16_t)EntityFlags::Player;
+    m_Player = Player(playerEntity);
+}
+
+Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
+{
+    Entity* closestEntity = nullptr;
+    auto HitEntity = [&closestEntity](Entity* entity)
+    {
+        if (closestEntity == nullptr || entity->zIndex > closestEntity->zIndex)
+        {
+            closestEntity = entity;
+        }
+    };
+
+    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    {
+        if (entity->flags & (uint16_t)EntityFlags::GravityZone) continue;
+        switch (entity->shape)
+        {
+            case Shape::Ellipse:
+            {
+                float distanceSquared = Math::DistanceSquared(
+                    entity->transform.position / entity->transform.scale,
+                    worldPosition / entity->transform.scale
+                );
+                if (distanceSquared <= 1.0f)
+                {
+                    HitEntity(entity.get());
+                }
+                break;
+            }
+            case Shape::Rectangle:
+            {
+                Math::float2 min = entity->transform.position - entity->transform.scale;
+                Math::float2 max = entity->transform.position + entity->transform.scale;
+                if (worldPosition.x >= min.x && worldPosition.y >= min.y &&
+                    worldPosition.x <= max.x && worldPosition.y <= max.y)
+                {
+                    HitEntity(entity.get());
+                }
+                break;
+            }
+            default:
+                Log::Warn("Invalid shape: " + std::to_string((int)entity->shape));
+        }
+    }
+    return closestEntity;
+}
+
+bool Application::LoopEditor(float /* deltaTime */)
+{
+    m_Renderer.NewFrame();
+
+    static float cameraSpeed = 0.05f;
+    m_Camera.transform.position += cameraSpeed * m_Input.Joystick();
+
+    static Entity* inspectedEntity = nullptr;
+    if (m_Input.IsMousePressed())
+    {
+        Math::float2 windowDimensions = { (float)m_Renderer.GetWidth(), (float)m_Renderer.GetHeight() };
+        Math::float2 viewPosition = (2.0f * m_Input.GetMousePosition() / windowDimensions) - 1.0f;
+        viewPosition.x *= windowDimensions.x / windowDimensions.y;
+        viewPosition.y *= -1;
+        inspectedEntity = GetHoveredEntity(m_Scene, m_Camera.transform.position + viewPosition);
+    }
+
+    ImGui::Begin("Inspector");
+    if (inspectedEntity != nullptr)
+    {
+        ImGui::Text("ID: %i", inspectedEntity->id);
+        ImGui::Text("Flags: %i", inspectedEntity->flags);
+
+        int zIndex = inspectedEntity->zIndex;
+        ImGui::InputInt("Z-index", &zIndex);
+        inspectedEntity->zIndex = zIndex;
+
+        ImGui::DragFloat2("Position", (float*)&inspectedEntity->transform.position, 0.0625f);
+        ImGui::DragFloat2("Scale", (float*)&inspectedEntity->transform.scale, 0.0625f);
+
+        ImGui::ColorEdit3("Color", (float*)&inspectedEntity->material.color);
+
+        static constexpr std::array<const char*, 2> shapes {
+            "Rectangle", "Ellipse"
+        };
+        if (ImGui::BeginCombo("Shape", shapes[(int)inspectedEntity->shape]))
+        {
+            for (int i = 0; i < (int)shapes.size(); i++)
+            {
+                if (ImGui::Selectable(shapes[i], i == (int)inspectedEntity->shape))
+                {
+                    inspectedEntity->shape = (Shape)i;
+                }
+            }
+            ImGui::EndCombo();
+        }
+    }
+    ImGui::End();
+
+    ImGui::Begin("Editor");
+    ImGui::DragFloat2("Camera position", (float*)&m_Camera.transform.position, 0.01f);
+    ImGui::DragFloat("Camera speed", &cameraSpeed, 0.01f);
+
+    static std::string sceneFilepath = (std::string)firstSceneFilepath;
+    ImGui::InputText("Scene path:", &sceneFilepath);
+    if (ImGui::Button("Load"))
+    {
+        LoadScene(sceneFilepath);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Save"))
+    {
+        WriteFile(sceneFilepath, m_Scene.Serialize());
+    }
+
+    ImGui::End();
+
+    m_Input.EndFrame();
+
+    m_Renderer.Resize();
+    m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
+    return m_Renderer.Render(m_Scene, m_Camera);
 }
 
 bool Application::LoopMainMenu(float /* deltaTime */)
@@ -210,5 +344,9 @@ void Application::Exit()
 void Application::OnEvent(const SDL_Event& event)
 {
     ImGui_ImplSDL3_ProcessEvent(&event);
-    m_Input.OnEvent(event);
+    if (!ImGui::GetIO().WantCaptureMouse)
+    {
+        // TODO: Only filter mouse events
+        m_Input.OnEvent(event);
+    }
 }

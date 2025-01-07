@@ -163,7 +163,8 @@ fn merge_cascades_frag(in: VertexData) -> @location(0) vec4f {
 
         let sample_uv =
             vec2f(f32(block_size.x * block_x), f32(block_size.y * block_y)) / vec2f(cascade_uniforms.texture_size) +
-            vec2f(uv / f32(cascade_uniforms.probe_size));
+            vec2f(uv / f32(cascade_uniforms.probe_size)) +
+            vec2f(0.5f) / vec2f(cascade_uniforms.texture_size);
 
         let next_interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
         radiance += merge_intervals(current_interval, next_interval);
@@ -186,7 +187,8 @@ fn lighting_frag(in: VertexData) -> @location(0) vec4f {
     {
         let sample_uv =
             vec2f(f32(i % 2) * f32(block_size.x), f32(i / 2) * f32(block_size.y)) / vec2f(cascade_uniforms.texture_size) +
-            in.uv / 2.0f;
+            in.uv / 2.0f +
+            vec2f(0.5f) / vec2f(cascade_uniforms.texture_size);
         let interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
         radiance += interval;
     }

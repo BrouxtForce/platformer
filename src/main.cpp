@@ -10,6 +10,7 @@
 
 SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
 {
+    GameState startGameState = GameState::MainMenu_MainMenu;
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "-v") == 0)
@@ -20,11 +21,15 @@ SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
         {
             Log::SetLogLevel(Log::LogLevel::None);
         }
+        else if (strcmp(argv[i], "-e") == 0)
+        {
+            startGameState = GameState::Editor;
+        }
     }
 
     Application* application = new Application();
     *state = application;
-    if (application->Init())
+    if (application->Init(startGameState))
     {
         return SDL_APP_CONTINUE;
     }

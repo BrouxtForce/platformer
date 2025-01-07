@@ -4,6 +4,120 @@
 
 #include <cassert>
 
+namespace Serialization
+{
+    std::ostream& operator<<(std::ostream& stream, const Math::float2& vector)
+    {
+        stream << vector.x << ' ' << vector.y;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Math::Color& color)
+    {
+        stream << color.r << ' ' << color.g << ' ' << color.b << ' ' << color.a;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Transform& transform)
+    {
+        stream << transform.position << ' ' << transform.scale;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Material& material)
+    {
+        stream << material.color;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Shape& shape)
+    {
+        stream << (uint32_t)shape;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const GravityZone& gravityZone)
+    {
+        stream << gravityZone.minAngle << ' ' << gravityZone.maxAngle;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Entity& entity)
+    {
+        stream << entity.flags << ' ';
+        stream << entity.zIndex << ' ';
+        stream << entity.transform << ' ';
+        stream << entity.material << ' ';
+        stream << entity.shape << ' ';
+        stream << entity.gravityZone;
+        return stream;
+    }
+
+    std::ostream& operator<<(std::ostream& stream, const Scene::Properties& properties)
+    {
+        stream << properties.backgroundColor;
+        return stream;
+    }
+}
+
+namespace Deserialization
+{
+    std::istream& operator>>(std::istream& stream, Math::float2& vector)
+    {
+        stream >> vector.x >> vector.y;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Math::Color& color)
+    {
+        stream >> color.r >> color.g >> color.b >> color.a;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Transform& transform)
+    {
+        stream >> transform.position >> transform.scale;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Material& material)
+    {
+        stream >> material.color;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Shape& shape)
+    {
+        uint32_t out = 0;
+        stream >> out;
+        shape = (Shape)out;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, GravityZone& gravityZone)
+    {
+        stream >> gravityZone.minAngle >> gravityZone.maxAngle;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Entity& entity)
+    {
+        stream >> entity.flags;
+        stream >> entity.zIndex;
+        stream >> entity.transform;
+        stream >> entity.material;
+        stream >> entity.shape;
+        stream >> entity.gravityZone;
+        return stream;
+    }
+
+    std::istream& operator>>(std::istream& stream, Scene::Properties& properties)
+    {
+        stream >> properties.backgroundColor;
+        return stream;
+    }
+}
+
 Entity* Scene::CreateEntity()
 {
     static uint16_t nextId = 1;
@@ -16,137 +130,41 @@ Entity* Scene::CreateEntity()
     return entity;
 }
 
-struct Collider
+void Scene::Clear()
 {
-    Transform transform;
-    Shape shape;
-};
+    entities.clear();
+}
 
-struct GravityZoneDescriptor
+std::string Scene::Serialize() const
 {
-    Transform transform;
-    float minAngle;
-    float maxAngle;
-};
+    using namespace Serialization;
 
-struct LightDescriptor
-{
-    Transform transform;
-    Math::Color color;
-};
-
-struct SceneDescription
-{
-    std::string name;
-    Math::Color backgroundColor;
-    std::vector<Collider> colliders;
-    std::vector<GravityZoneDescriptor> gravityZones;
-    std::vector<LightDescriptor> lights;
-    uint64_t seed;
-};
-
-static std::array<SceneDescription, 1> s_SceneDescriptions = {
-    SceneDescription {
-        .name = "City",
-        .backgroundColor = Math::Color(0.1, 0.1, 0.1),
-        .colliders = {
-            { Transform(Math::float2(-1.0f, -0.25f), Math::float2(1.0f, 0.25f)), Shape::Rectangle },
-            { Transform(Math::float2(0.0f, -0.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
-            { Transform(Math::float2(0.25f, -1.0f),  Math::float2(0.25f, 0.5f)), Shape::Rectangle },
-
-            { Transform(Math::float2(0.0f, -1.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
-            { Transform(Math::float2(-1.0f, -1.75f), Math::float2(1.0f, 0.25f)), Shape::Rectangle },
-            { Transform(Math::float2(-2.0f, -1.5f),  Math::float2(0.5f)       ), Shape::Ellipse },
-            { Transform(Math::float2(-2.25f,-0.75f), Math::float2(0.25f,0.75f)), Shape::Rectangle },
-            { Transform(Math::float2(-2.25f, 1.25f), Math::float2(0.25f,0.25f)), Shape::Rectangle },
-            { Transform(Math::float2(-2.0f, 1.5f),   Math::float2(0.5f)       ), Shape::Ellipse },
-            { Transform(Math::float2(-0.5f, 1.75f),  Math::float2(1.5f, 0.25f)), Shape::Rectangle },
-        },
-        .gravityZones = {
-            { Transform(Math::float2(0.0f, -0.5f),  Math::float2(1.5f)), 0.0f, M_PI_2 },
-            { Transform(Math::float2(0.0f, -1.5f),  Math::float2(1.5f)), -M_PI_2, 0.0f },
-            { Transform(Math::float2(-2.0f, -1.5f), Math::float2(1.5f)), -M_PI, -M_PI_2 },
-            { Transform(Math::float2(-2.0f, 1.5f),  Math::float2(1.5f)), M_PI_2, M_PI }
-        },
-        .lights = {
-            { Transform(Math::float2(0.0f, 1.0f), Math::float2(0.1f)), Math::Color(1, 1, 1) },
-            { Transform(Math::float2(-1.0f, 0.8f), Math::float2(0.1f)), Math::Color(1, 0, 1) },
-            { Transform(Math::float2(1.0f, -0.4f), Math::float2(0.1f)), Math::Color(1, 1, 0) },
-            { Transform(Math::float2(0.0f, 0.4f), Math::float2(0.1f)), Math::Color(0, 1, 1) }
-        },
-        .seed = 892542184
-    }
-};
-
-void Scene::Load(int index)
-{
-    assert(index >= 0 && index < (int)s_SceneDescriptions.size());
-    const SceneDescription& description = s_SceneDescriptions[index];
-
-    SDL_srand(description.seed);
-
-    properties.backgroundColor = description.backgroundColor;
-
-    for (const Collider& collider : description.colliders)
+    std::stringstream ss;
+    ss << properties << '\n';
+    for (int i = 0; i < (int)entities.size(); i++)
     {
-        Entity* entity = CreateEntity();
-        entity->transform = collider.transform;
-        entity->flags = (uint16_t)EntityFlags::Collider;
-        entity->material.color = Math::Color(0.2, 0.2, 0.2);
-        entity->shape = collider.shape;
-        entity->zIndex = 3;
-    }
-
-    for (const GravityZoneDescriptor& zone : description.gravityZones)
-    {
-        Entity* entity = CreateEntity();
-        entity->transform = zone.transform;
-        entity->flags = (uint16_t)EntityFlags::GravityZone;
-        entity->material.color = Math::Color(0.0, 0.0, 0.0);
-        entity->shape = Shape::Ellipse;
-        entity->zIndex = 2;
-        entity->gravityZone = {
-            .minAngle = zone.minAngle,
-            .maxAngle = zone.maxAngle
-        };
-    }
-
-    for (const LightDescriptor& light : description.lights)
-    {
-        Entity* entity = CreateEntity();
-        entity->transform = light.transform;
-        entity->flags = (uint16_t)EntityFlags::Light;
-        entity->material.color = light.color;
-        entity->shape = Shape::Ellipse;
-        entity->zIndex = 4;
-    }
-
-    constexpr int NUM_BUILDINGS = 15;
-    constexpr float BUILDING_RANGE = 2;
-    constexpr float MIN_DELTA = 0.05;
-    constexpr float MAX_DELTA = 0.3;
-    constexpr float MIN_HEIGHT = 0.1f;
-    constexpr float MAX_HEIGHT = 0.9f;
-
-    float prevBuildingHeight = (float)(MIN_HEIGHT + MAX_HEIGHT) / 2.0f;
-    for (int i = 0; i < NUM_BUILDINGS; i++)
-    {
-        Entity* entity = CreateEntity();
-
-        constexpr float BUILDING_WIDTH = BUILDING_RANGE * 2.0f / NUM_BUILDINGS;
-        entity->transform.scale.x = BUILDING_WIDTH / 2.0f;
-        do
+        if ((entities[i]->flags & (uint16_t)EntityFlags::Player) != 0)
         {
-            float rand = SDL_randf() * 2.0f - 1.0f;
-            entity->transform.scale.y = prevBuildingHeight + rand * (MAX_DELTA - MIN_DELTA) + std::copysign(MIN_DELTA, rand);
+            continue;
         }
-        while (entity->transform.scale.y < MIN_HEIGHT || entity->transform.scale.y > MAX_HEIGHT);
-        prevBuildingHeight = entity->transform.scale.y;
-        entity->transform.position.x = BUILDING_WIDTH * ((float)i - (float)NUM_BUILDINGS / 2.0f);
-        entity->transform.position.y = -1.0f + entity->transform.scale.y;
+        if (i != 0)
+        {
+            ss << '\n';
+        }
+        ss << *entities[i];
+    }
+    return ss.str();
+}
 
-        entity->material.color = Math::Color(0.13, 0.13, 0.13);
+void Scene::Deserialize(const std::string& data)
+{
+    using namespace Deserialization;
 
-        entity->zIndex = 1;
+    std::stringstream ss(data);
+    ss >> properties;
+    while (!ss.eof())
+    {
+        Entity* entity = CreateEntity();
+        ss >> *entity;
     }
 }

@@ -146,6 +146,11 @@ namespace Math
         return Length(a - b);
     }
 
+    float DistanceSquared(float2 a, float2 b)
+    {
+        return LengthSquared(a - b);
+    }
+
     float Dot(float2 a, float2 b)
     {
         return a.x * b.x + a.y * b.y;

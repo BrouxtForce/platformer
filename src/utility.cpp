@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "SDL3/SDL_iostream.h"
 #include "log.hpp"
 
 std::string GetBasePath()
@@ -16,15 +17,17 @@ std::string GetBasePath()
 
 std::string ReadFile(const std::string& filepath)
 {
-
     size_t dataSize = 0;
     char* data = (char*)SDL_LoadFile((GetBasePath() + filepath).c_str(), &dataSize);
     if (data == nullptr)
     {
         return {};
     }
+    Log::Debug("Read '" + filepath + "' (" + std::to_string(dataSize) + " bytes)");
+
     std::string out = data;
     SDL_free(data);
+
     return out;
 }
 
@@ -38,6 +41,7 @@ std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
     {
         return dataVector;
     }
+    Log::Debug("Read '" + filepath + "' (" + std::to_string(dataSize) + " bytes)");
 
     dataVector.reserve(dataSize);
     SDL_memcpy(dataVector.data(), data, dataSize);
@@ -45,6 +49,33 @@ std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
     SDL_free(data);
 
     return dataVector;
+}
+
+void WriteFile(const std::string& filepath, const std::string& data)
+{
+    const std::string fullPath = GetBasePath() + filepath;
+    // TODO: There seems to be an SDL_SaveFile() function in the next release, which would simplify this code
+    SDL_IOStream* context = SDL_IOFromFile(fullPath.c_str(), "w+");
+    if (context == nullptr)
+    {
+        Log::Error("Failed to write file '" + filepath + "' (Failed to create handle)");
+        Log::Error(SDL_GetError());
+    }
+    else
+    {
+        size_t bytesWritten = SDL_WriteIO(context, data.data(), data.size());
+        if (bytesWritten != data.size())
+        {
+            Log::Error("Failed to write file '" + filepath + "' (" + std::to_string(bytesWritten) + " bytes written)");
+            Log::Error(SDL_GetError());
+        }
+        else
+        {
+            Log::Debug("Wrote '" + filepath + "' (" + std::to_string(bytesWritten) + " bytes)");
+        }
+    }
+    SDL_CloseIO(context);
+    return;
 }
 
 std::vector<std::string> GetFilesInDirectory(const std::string& directory)

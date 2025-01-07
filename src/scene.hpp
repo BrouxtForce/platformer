@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <sstream>
 
 #include "transform.hpp"
 
@@ -23,7 +24,8 @@ enum class EntityFlags : uint16_t
     GravityZone = 1 << 1,
     Text        = 1 << 2,
     Hidden      = 1 << 3,
-    Light       = 1 << 4
+    Light       = 1 << 4,
+    Player      = 1 << 5
 };
 
 struct GravityZone
@@ -59,7 +61,8 @@ public:
     Scene() = default;
 
     Entity* CreateEntity();
+    void Clear();
 
-    constexpr static int City = 0;
-    void Load(int index);
+    std::string Serialize() const;
+    void Deserialize(const std::string& data);
 };
