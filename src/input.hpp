@@ -54,4 +54,6 @@ private:
 
     bool IsKeyDown(SDL_Scancode scancode) const;
     bool IsKeyPressed(SDL_Scancode scancode) const;
+
+    friend class Application;
 };

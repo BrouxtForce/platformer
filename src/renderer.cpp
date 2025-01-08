@@ -222,8 +222,9 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
-        if ((entity->flags & (uint16_t)EntityFlags::GravityZone) != 0 ||
-            (entity->flags & (uint16_t)EntityFlags::Hidden) != 0)
+        if (!renderHiddenEntities &&
+            (entity->flags & (uint16_t)EntityFlags::GravityZone ||
+             entity->flags & (uint16_t)EntityFlags::Hidden))
         {
             continue;
         }

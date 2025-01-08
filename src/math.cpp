@@ -200,4 +200,9 @@ namespace Math
     {
         return (dividend + divisor - 1) / divisor;
     }
+
+    float2 Floor(float2 value)
+    {
+        return float2(std::floorf(value.x), std::floorf(value.y));
+    }
 }

@@ -25,7 +25,8 @@ enum class EntityFlags : uint16_t
     Text        = 1 << 2,
     Hidden      = 1 << 3,
     Light       = 1 << 4,
-    Player      = 1 << 5
+    Player      = 1 << 5,
+    Destroyed   = 1 << 6
 };
 
 struct GravityZone
@@ -61,6 +62,10 @@ public:
     Scene() = default;
 
     Entity* CreateEntity();
+    void DestroyEntity(Entity* entity);
+
+    void EndFrame();
+
     void Clear();
 
     std::string Serialize() const;

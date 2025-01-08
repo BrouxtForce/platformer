@@ -101,4 +101,10 @@ namespace Math
 
     // Computes ceil(dividend / divisor)
     int DivideCeil(int dividend, int divisor);
+
+    float2 Floor(float2 value);
+
+    constexpr double PI = M_PI;
+    constexpr double RAD_TO_DEG = 180.0 / PI;
+    constexpr double DEG_TO_RAD = PI / 180.0;
 }

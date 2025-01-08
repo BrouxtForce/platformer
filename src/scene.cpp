@@ -38,7 +38,9 @@ namespace Serialization
 
     std::ostream& operator<<(std::ostream& stream, const GravityZone& gravityZone)
     {
+        std::streamsize prevPrecision = stream.precision(8);
         stream << gravityZone.minAngle << ' ' << gravityZone.maxAngle;
+        stream.precision(prevPrecision);
         return stream;
     }
 
@@ -130,11 +132,34 @@ Entity* Scene::CreateEntity()
     return entity;
 }
 
+void Scene::DestroyEntity(Entity* entity)
+{
+    assert(entity != nullptr);
+    assert((entity->flags & (uint16_t)EntityFlags::Destroyed) == 0);
+    entity->flags |= (uint16_t)EntityFlags::Destroyed;
+}
+
+void Scene::EndFrame()
+{
+    int lastEntityIndex = entities.size() - 1;
+    for (int i = (int)entities.size() - 1; i >= 0; i--)
+    {
+        if ((entities[i]->flags & (uint16_t)EntityFlags::Destroyed) == 0)
+        {
+            continue;
+        }
+        entities[i] = std::move(entities[lastEntityIndex]);
+        lastEntityIndex--;
+    }
+    entities.resize(lastEntityIndex + 1);
+}
+
 void Scene::Clear()
 {
     entities.clear();
 }
 
+// TODO: Serialize and deserialize Entity::name
 std::string Scene::Serialize() const
 {
     using namespace Serialization;

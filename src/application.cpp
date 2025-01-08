@@ -58,7 +58,7 @@ void Application::LoadScene(const std::string& sceneFilepath)
 
     Entity* playerEntity = m_Scene.CreateEntity();
     playerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
-    playerEntity->transform.position = Math::float2(-0.75f, 0.1001f);
+    playerEntity->transform.position = Math::float2(0.0f, 0.0f);
     playerEntity->transform.scale = Math::float2(0.1);
     playerEntity->shape = Shape::Ellipse;
     playerEntity->flags |= (uint16_t)EntityFlags::Player;
@@ -78,7 +78,6 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
-        if (entity->flags & (uint16_t)EntityFlags::GravityZone) continue;
         switch (entity->shape)
         {
             case Shape::Ellipse:
@@ -111,35 +110,91 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
     return closestEntity;
 }
 
+void ImGuiFlag(const char* label, uint16_t& flags, uint16_t mask)
+{
+    uint32_t value = flags;
+    ImGui::CheckboxFlags(label, &value, mask);
+    flags = value;
+}
+
 bool Application::LoopEditor(float /* deltaTime */)
 {
     m_Renderer.NewFrame();
 
+    m_Renderer.renderHiddenEntities = true;
+
     static float cameraSpeed = 0.05f;
     m_Camera.transform.position += cameraSpeed * m_Input.Joystick();
 
-    static Entity* inspectedEntity = nullptr;
-    if (m_Input.IsMousePressed())
+    Math::float2 mouseWorldPosition;
     {
         Math::float2 windowDimensions = { (float)m_Renderer.GetWidth(), (float)m_Renderer.GetHeight() };
         Math::float2 viewPosition = (2.0f * m_Input.GetMousePosition() / windowDimensions) - 1.0f;
         viewPosition.x *= windowDimensions.x / windowDimensions.y;
         viewPosition.y *= -1;
-        inspectedEntity = GetHoveredEntity(m_Scene, m_Camera.transform.position + viewPosition);
+        mouseWorldPosition = (m_Camera.transform.position + viewPosition) * m_Camera.transform.scale;
+
+        // Quantize the position to a multiple of 0.01f
+        mouseWorldPosition = Math::Floor(mouseWorldPosition * 100.0f) / 100.0f;
+    }
+
+    static Entity* inspectedEntity = nullptr;
+    static Entity* templateEntity = nullptr;
+    if (m_Input.IsMousePressed())
+    {
+        inspectedEntity = GetHoveredEntity(m_Scene, mouseWorldPosition);
+        if (inspectedEntity != nullptr)
+        {
+            templateEntity = inspectedEntity;
+        }
+    }
+
+    if (m_Input.IsKeyPressed(SDL_SCANCODE_N))
+    {
+        inspectedEntity = m_Scene.CreateEntity();
+        inspectedEntity->transform.position = mouseWorldPosition;
+        inspectedEntity->transform.scale = 0.1f;
+
+        if (templateEntity != nullptr)
+        {
+            inspectedEntity->flags = templateEntity->flags;
+            inspectedEntity->zIndex = templateEntity->zIndex;
+            inspectedEntity->transform.scale = templateEntity->transform.scale;
+            inspectedEntity->material = templateEntity->material;
+            inspectedEntity->shape = templateEntity->shape;
+            inspectedEntity->gravityZone = templateEntity->gravityZone;
+            if (m_Input.IsKeyDown(SDL_SCANCODE_LSHIFT))
+            {
+                inspectedEntity->transform.position = templateEntity->transform.position;
+            }
+        }
+    }
+
+    if (inspectedEntity != nullptr && m_Input.IsKeyPressed(SDL_SCANCODE_BACKSPACE))
+    {
+        m_Scene.DestroyEntity(inspectedEntity);
+        inspectedEntity = nullptr;
+        templateEntity = nullptr;
     }
 
     ImGui::Begin("Inspector");
     if (inspectedEntity != nullptr)
     {
+        ImGui::InputText("Name:", &inspectedEntity->name);
+
         ImGui::Text("ID: %i", inspectedEntity->id);
-        ImGui::Text("Flags: %i", inspectedEntity->flags);
+        ImGuiFlag("Flag: Collider",     inspectedEntity->flags, (uint16_t)EntityFlags::Collider);
+        ImGuiFlag("Flag: Gravity Zone", inspectedEntity->flags, (uint16_t)EntityFlags::GravityZone);
+        ImGuiFlag("Flag: Text",         inspectedEntity->flags, (uint16_t)EntityFlags::Text);
+        ImGuiFlag("Flag: Hidden",       inspectedEntity->flags, (uint16_t)EntityFlags::Hidden);
+        ImGuiFlag("Flag: Light",        inspectedEntity->flags, (uint16_t)EntityFlags::Light);
 
         int zIndex = inspectedEntity->zIndex;
         ImGui::InputInt("Z-index", &zIndex);
         inspectedEntity->zIndex = zIndex;
 
-        ImGui::DragFloat2("Position", (float*)&inspectedEntity->transform.position, 0.0625f);
-        ImGui::DragFloat2("Scale", (float*)&inspectedEntity->transform.scale, 0.0625f);
+        ImGui::DragFloat2("Position", (float*)&inspectedEntity->transform.position, 0.01);
+        ImGui::DragFloat2("Scale", (float*)&inspectedEntity->transform.scale, 0.01);
 
         ImGui::ColorEdit3("Color", (float*)&inspectedEntity->material.color);
 
@@ -157,12 +212,25 @@ bool Application::LoopEditor(float /* deltaTime */)
             }
             ImGui::EndCombo();
         }
+
+        if (inspectedEntity->flags & (uint16_t)EntityFlags::GravityZone)
+        {
+            int minAngle = (int)(inspectedEntity->gravityZone.minAngle * Math::RAD_TO_DEG);
+            int maxAngle = (int)(inspectedEntity->gravityZone.maxAngle * Math::RAD_TO_DEG);
+            ImGui::Text("Radial Gravity Zone (degrees):");
+            ImGui::DragInt("Min angle", &minAngle, 1, -180, 180);
+            ImGui::DragInt("Max angle", &maxAngle, 1, -180, 180);
+            inspectedEntity->gravityZone.minAngle = minAngle * Math::DEG_TO_RAD;
+            inspectedEntity->gravityZone.maxAngle = maxAngle * Math::DEG_TO_RAD;
+        }
     }
     ImGui::End();
 
     ImGui::Begin("Editor");
     ImGui::DragFloat2("Camera position", (float*)&m_Camera.transform.position, 0.01f);
     ImGui::DragFloat("Camera speed", &cameraSpeed, 0.01f);
+    ImGui::DragFloat("Camera scale", &m_Camera.transform.scale.x, 0.01f);
+    m_Camera.transform.scale.y = m_Camera.transform.scale.x;
 
     static std::string sceneFilepath = (std::string)firstSceneFilepath;
     ImGui::InputText("Scene path:", &sceneFilepath);
@@ -179,6 +247,7 @@ bool Application::LoopEditor(float /* deltaTime */)
     ImGui::End();
 
     m_Input.EndFrame();
+    m_Scene.EndFrame();
 
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
@@ -290,6 +359,7 @@ bool Application::LoopMainMenu(float /* deltaTime */)
     }
 
     m_Input.EndFrame();
+    m_Scene.EndFrame();
 
     ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
 
@@ -307,9 +377,12 @@ bool Application::LoopGame(float deltaTime)
     m_Renderer.NewFrame();
 
     m_Player.Move(m_Scene, m_Input.Joystick(), m_Input.IsKeyPressed(Key::Jump));
-    m_Camera.FollowTransform(m_Player.GetTransform(), deltaTime, 0.15f);
+
+    float cameraOffsetY = -0.3f;
+    m_Camera.Follow(m_Player.GetTransform().position + cameraOffsetY * m_Player.gravityDirection, deltaTime, 0.15f);
 
     m_Input.EndFrame();
+    m_Scene.EndFrame();
 
     ImGui::Text("CPU: %fms", frameTime);
     ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);

@@ -16,6 +16,8 @@
 class Renderer
 {
 public:
+    bool renderHiddenEntities = false;
+
     Renderer() = default;
 
     Renderer(const Renderer&) = delete;

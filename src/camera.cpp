@@ -9,7 +9,7 @@ Math::Matrix3x3 Camera::GetMatrix() const
     );
 }
 
-void Camera::FollowTransform(const Transform& otherTransform, float deltaTime, float halfLifeSeconds)
+void Camera::Follow(const Math::float2& position, float deltaTime, float halfLifeSeconds)
 {
-    transform.position = Math::LerpSmooth(transform.position, otherTransform.position, deltaTime, halfLifeSeconds);
+    transform.position = Math::LerpSmooth(transform.position, position, deltaTime, halfLifeSeconds);
 }

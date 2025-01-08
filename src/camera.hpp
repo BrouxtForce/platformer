@@ -10,5 +10,5 @@ public:
 
     Math::Matrix3x3 GetMatrix() const;
 
-    void FollowTransform(const Transform& otherTransform, float deltaTime, float halfLifeSeconds);
+    void Follow(const Math::float2& position, float deltaTime, float halfLifeSeconds);
 };
