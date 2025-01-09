@@ -18,27 +18,32 @@ namespace Math
         inline float2(float scalar)
             : x(scalar), y(scalar) {}
 
-        float2 operator+(const float2& other);
-        float2 operator-(const float2& other);
-        float2 operator*(const float2& other);
-        float2 operator/(const float2& other);
+        float2 operator+(const float2& other) const;
+        float2 operator-(const float2& other) const;
+        float2 operator*(const float2& other) const;
+        float2 operator/(const float2& other) const;
 
         float2& operator+=(const float2& other);
         float2& operator-=(const float2& other);
         float2& operator*=(const float2& other);
         float2& operator/=(const float2& other);
 
-        float2 operator-();
+        float2 operator+(const float& other) const;
+        float2 operator-(const float& other) const;
+        float2 operator*(const float& other) const;
+        float2 operator/(const float& other) const;
+
+        float2 operator-() const;
 
         float& operator[](int index);
 
         std::string ToString();
     };
 
-    float2 operator+(const float2& left, const float2& right);
-    float2 operator-(const float2& left, const float2& right);
-    float2 operator*(const float2& left, const float2& right);
-    float2 operator/(const float2& left, const float2& right);
+    float2 operator+(const float& left, const float2& right);
+    float2 operator-(const float& left, const float2& right);
+    float2 operator*(const float& left, const float2& right);
+    float2 operator/(const float& left, const float2& right);
 
     struct float3
     {
@@ -54,10 +59,10 @@ namespace Math
         inline float3(float scalar)
             : x(scalar), y(scalar), z(scalar) {}
 
-        float3 operator+(const float3& other);
-        float3 operator-(const float3& other);
-        float3 operator*(const float3& other);
-        float3 operator/(const float3& other);
+        float3 operator+(const float3& other) const;
+        float3 operator-(const float3& other) const;
+        float3 operator*(const float3& other) const;
+        float3 operator/(const float3& other) const;
     };
 
     struct Color
@@ -98,6 +103,8 @@ namespace Math
     float2 LerpSmooth(float2 a, float2 b, float deltaTime, float halfLifeSeconds);
 
     float2 Direction(float angle);
+
+    float2 RotateVector(float2 vector, float angle);
 
     // Computes ceil(dividend / divisor)
     int DivideCeil(int dividend, int divisor);

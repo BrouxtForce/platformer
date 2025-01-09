@@ -4,7 +4,6 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_stdlib.h>
 
-#include "physics.hpp"
 #include "log.hpp"
 #include "utility.hpp"
 
@@ -124,7 +123,7 @@ bool Application::LoopEditor(float /* deltaTime */)
     m_Renderer.renderHiddenEntities = true;
 
     static float cameraSpeed = 0.05f;
-    m_Camera.transform.position += cameraSpeed * m_Input.Joystick();
+    m_Camera.transform.position += cameraSpeed * m_Camera.transform.scale * m_Input.Joystick();
 
     Math::float2 mouseWorldPosition;
     {
@@ -195,6 +194,10 @@ bool Application::LoopEditor(float /* deltaTime */)
 
         ImGui::DragFloat2("Position", (float*)&inspectedEntity->transform.position, 0.01);
         ImGui::DragFloat2("Scale", (float*)&inspectedEntity->transform.scale, 0.01);
+
+        int rotation = inspectedEntity->transform.rotation * Math::RAD_TO_DEG;
+        ImGui::DragInt("Rotation", &rotation);
+        inspectedEntity->transform.rotation = (float)rotation * Math::DEG_TO_RAD;
 
         ImGui::ColorEdit3("Color", (float*)&inspectedEntity->material.color);
 
@@ -378,8 +381,8 @@ bool Application::LoopGame(float deltaTime)
 
     m_Player.Move(m_Scene, m_Input.Joystick(), m_Input.IsKeyPressed(Key::Jump));
 
-    float cameraOffsetY = -0.3f;
-    m_Camera.Follow(m_Player.GetTransform().position + cameraOffsetY * m_Player.gravityDirection, deltaTime, 0.15f);
+    Math::float2 cameraOffset = { 0.0f, 0.3f };
+    m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, m_Player.gravityDirection, deltaTime);
 
     m_Input.EndFrame();
     m_Scene.EndFrame();

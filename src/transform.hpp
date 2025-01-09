@@ -6,6 +6,7 @@ struct Transform
 {
     Math::float2 position = 0.0f;
     Math::float2 scale = 1.0f;
+    float rotation = 0.0f;
 
     Transform() = default;
     inline Transform(Math::float2 position, Math::float2 scale)

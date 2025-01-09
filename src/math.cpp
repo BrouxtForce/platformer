@@ -4,22 +4,22 @@
 
 namespace Math
 {
-    float2 float2::operator+(const float2& other)
+    float2 float2::operator+(const float2& other) const
     {
         return float2(x + other.x, y + other.y);
     }
 
-    float2 float2::operator-(const float2& other)
+    float2 float2::operator-(const float2& other) const
     {
         return float2(x - other.x, y - other.y);
     }
 
-    float2 float2::operator*(const float2& other)
+    float2 float2::operator*(const float2& other) const
     {
         return float2(x * other.x, y * other.y);
     }
 
-    float2 float2::operator/(const float2& other)
+    float2 float2::operator/(const float2& other) const
     {
         return float2(x / other.x, y / other.y);
     }
@@ -52,7 +52,27 @@ namespace Math
         return *this;
     }
 
-    float2 float2::operator-()
+    float2 float2::operator+(const float& other) const
+    {
+        return float2(x + other, y + other);
+    }
+
+    float2 float2::operator-(const float& other) const
+    {
+        return float2(x - other, y - other);
+    }
+
+    float2 float2::operator*(const float& other) const
+    {
+        return float2(x * other, y * other);
+    }
+
+    float2 float2::operator/(const float& other) const
+    {
+        return float2(x / other, y / other);
+    }
+
+    float2 float2::operator-() const
     {
         return float2(-x, -y);
     }
@@ -73,42 +93,42 @@ namespace Math
         return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
     }
 
-    float2 operator+(const float2& left, const float2& right)
+    float2 operator+(const float& left, const float2& right)
     {
-        return float2(left.x + right.x, left.y + right.y);
+        return float2(left + right.x, left + right.y);
     }
 
-    float2 operator-(const float2& left, const float2& right)
+    float2 operator-(const float& left, const float2& right)
     {
-        return float2(left.x - right.x, left.y - right.y);
+        return float2(left - right.x, left - right.y);
     }
 
-    float2 operator*(const float2& left, const float2& right)
+    float2 operator*(const float& left, const float2& right)
     {
-        return float2(left.x * right.x, left.y * right.y);
+        return float2(left * right.x, left * right.y);
     }
 
-    float2 operator/(const float2& left, const float2& right)
+    float2 operator/(const float& left, const float2& right)
     {
-        return float2(left.x / right.x, left.y / right.y);
+        return float2(left / right.x, left / right.y);
     }
 
-    float3 float3::operator+(const float3& other)
+    float3 float3::operator+(const float3& other) const
     {
         return float3(x + other.x, y + other.y, z + other.z);
     }
 
-    float3 float3::operator-(const float3& other)
+    float3 float3::operator-(const float3& other) const
     {
         return float3(x - other.x, y - other.y, z - other.z);
     }
 
-    float3 float3::operator*(const float3& other)
+    float3 float3::operator*(const float3& other) const
     {
         return float3(x * other.x, y * other.y, z * other.z);
     }
 
-    float3 float3::operator/(const float3& other)
+    float3 float3::operator/(const float3& other) const
     {
         return float3(x / other.x, y / other.y, z / other.z);
     }
@@ -194,6 +214,16 @@ namespace Math
     float2 Direction(float angle)
     {
         return float2(std::cos(angle), std::sin(angle));
+    }
+
+    float2 RotateVector(float2 vector, float angle)
+    {
+        float cosTheta = std::cos(angle);
+        float sinTheta = std::sin(angle);
+        return float2(
+            vector.x * cosTheta - vector.y * sinTheta,
+            vector.x * sinTheta + vector.y * cosTheta
+        );
     }
 
     int DivideCeil(int dividend, int divisor)

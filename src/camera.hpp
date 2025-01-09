@@ -10,5 +10,5 @@ public:
 
     Math::Matrix3x3 GetMatrix() const;
 
-    void Follow(const Math::float2& position, float deltaTime, float halfLifeSeconds);
+    void FollowPlayer(Math::float2 position, Math::float2 offset, Math::float2 down, float deltaTime);
 };
