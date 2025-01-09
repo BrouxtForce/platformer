@@ -62,6 +62,13 @@ fn raymarch_scene(ray_position: vec2f, ray_direction: vec2f, ray_length: f32) ->
     for (var i = 0; i < MAX_ITERATIONS; i++)
     {
         let current_position: vec2f = ray_position + ray_direction * distance_travelled;
+
+        // Don't bother if the position is not within the texture'
+        if (any(current_position < vec2f(0.0f)) || any(current_position > vec2f(1.0f)))
+        {
+            break;
+        }
+
         let distance: f32 = textureSampleLevel(sdf_texture, radiance_sampler, current_position, 0).r;
         distance_travelled += distance;
 
@@ -163,7 +170,7 @@ fn merge_cascades_frag(in: VertexData) -> @location(0) vec4f {
 
         let sample_uv =
             vec2f(f32(block_size.x * block_x), f32(block_size.y * block_y)) / vec2f(cascade_uniforms.texture_size) +
-            vec2f(uv / f32(cascade_uniforms.probe_size)) +
+            vec2f(uv / f32(cascade_uniforms.probe_size)) * vec2f(vec2f(block_size - 1) / vec2f(block_size)) +
             vec2f(0.5f) / vec2f(cascade_uniforms.texture_size);
 
         let next_interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
@@ -187,7 +194,7 @@ fn lighting_frag(in: VertexData) -> @location(0) vec4f {
     {
         let sample_uv =
             vec2f(f32(i % 2) * f32(block_size.x), f32(i / 2) * f32(block_size.y)) / vec2f(cascade_uniforms.texture_size) +
-            in.uv / 2.0f +
+            in.uv / 2.0f * vec2f(vec2f(block_size - 1) / vec2f(block_size)) +
             vec2f(0.5f) / vec2f(cascade_uniforms.texture_size);
         let interval = textureSampleLevel(cascade_texture, radiance_sampler, sample_uv, 0);
         radiance += interval;
