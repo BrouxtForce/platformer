@@ -1,7 +1,9 @@
 #pragma once
 
 #include "math.hpp"
+
 #include "scene.hpp"
+#include "input.hpp"
 
 class Player
 {
@@ -11,6 +13,8 @@ public:
     float gravityAcceleration = 0.003f;
     float drag = 0.50f;
 
+    float boostAcceleration = 0.001f;
+
     Math::float2 velocity{};
     Math::float2 gravityVelocity{};
     Math::float2 gravityDirection = Math::float2(0, -1.0f);
@@ -18,7 +22,7 @@ public:
     Player() = default;
     Player(Entity* entity);
 
-    void Move(const Scene& scene, Math::float2 input, bool jump);
+    void Move(const Scene& scene, const Input& input);
     void Jump();
 
     inline Transform& GetTransform() {

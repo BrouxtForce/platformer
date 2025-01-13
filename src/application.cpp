@@ -34,17 +34,26 @@ bool Application::Init(GameState startGameState)
 
 bool Application::Loop(float deltaTime)
 {
+    constexpr float TARGET_DELTA_TIME = 1.0f / 60.0f;
+    static float timeAccumulation = 0.0f;
+    timeAccumulation += deltaTime;
+    if (timeAccumulation < TARGET_DELTA_TIME)
+    {
+        return true;
+    }
+    timeAccumulation -= TARGET_DELTA_TIME;
+
     if (m_GameState == GameState::Editor)
     {
-        return LoopEditor(deltaTime);
+        return LoopEditor(TARGET_DELTA_TIME);
     }
     if ((int)m_GameState & (int)GameState::MainMenu)
     {
-        return LoopMainMenu(deltaTime);
+        return LoopMainMenu(TARGET_DELTA_TIME);
     }
     if (m_GameState == GameState::Game)
     {
-        return LoopGame(deltaTime);
+        return LoopGame(TARGET_DELTA_TIME);
     }
     Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
     return false;
@@ -131,7 +140,7 @@ bool Application::LoopEditor(float /* deltaTime */)
         Math::float2 viewPosition = (2.0f * m_Input.GetMousePosition() / windowDimensions) - 1.0f;
         viewPosition.x *= windowDimensions.x / windowDimensions.y;
         viewPosition.y *= -1;
-        mouseWorldPosition = (m_Camera.transform.position + viewPosition) * m_Camera.transform.scale;
+        mouseWorldPosition = m_Camera.transform.position + viewPosition * m_Camera.transform.scale;
 
         // Quantize the position to a multiple of 0.01f
         mouseWorldPosition = Math::Floor(mouseWorldPosition * 100.0f) / 100.0f;
@@ -195,7 +204,7 @@ bool Application::LoopEditor(float /* deltaTime */)
         ImGui::DragFloat2("Position", (float*)&inspectedEntity->transform.position, 0.01);
         ImGui::DragFloat2("Scale", (float*)&inspectedEntity->transform.scale, 0.01);
 
-        int rotation = inspectedEntity->transform.rotation * Math::RAD_TO_DEG;
+        int rotation = std::roundf(inspectedEntity->transform.rotation * Math::RAD_TO_DEG);
         ImGui::DragInt("Rotation", &rotation);
         inspectedEntity->transform.rotation = (float)rotation * Math::DEG_TO_RAD;
 
@@ -350,7 +359,7 @@ bool Application::LoopMainMenu(float /* deltaTime */)
                     }
                 }
             }
-            if (m_Menu.Button("Back", { 0.0f, -0.7f }, buttonSize, buttonPadding))
+            if (m_Menu.Button("Back", { 0.0f, -0.8f }, buttonSize, buttonPadding))
             {
                 m_GameState = GameState::MainMenu_MainMenu;
                 m_ActiveControlRebind = { -1, -1 };
@@ -379,9 +388,14 @@ bool Application::LoopGame(float deltaTime)
 
     m_Renderer.NewFrame();
 
-    m_Player.Move(m_Scene, m_Input.Joystick(), m_Input.IsKeyPressed(Key::Jump));
+    m_Player.Move(m_Scene, m_Input);
 
     Math::float2 cameraOffset = { 0.0f, 0.3f };
+    cameraOffset.x = (std::exp(Math::Length(m_Player.velocity)) - 1.0f) * 20.0f;
+    if (Math::Dot(m_Player.velocity, { -m_Player.gravityDirection.y, m_Player.gravityDirection.x }) < 0.0f)
+    {
+        cameraOffset.x *= -1.0f;
+    }
     m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, m_Player.gravityDirection, deltaTime);
 
     m_Input.EndFrame();
@@ -420,9 +434,30 @@ void Application::Exit()
 void Application::OnEvent(const SDL_Event& event)
 {
     ImGui_ImplSDL3_ProcessEvent(&event);
-    if (!ImGui::GetIO().WantCaptureMouse)
+    switch (event.type)
     {
-        // TODO: Only filter mouse events
-        m_Input.OnEvent(event);
+        case SDL_EVENT_MOUSE_MOTION:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case SDL_EVENT_MOUSE_WHEEL:
+        case SDL_EVENT_MOUSE_ADDED:
+        case SDL_EVENT_MOUSE_REMOVED:
+            if (!ImGui::GetIO().WantCaptureMouse)
+            {
+                m_Input.OnEvent(event);
+            }
+            break;
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+        case SDL_EVENT_TEXT_EDITING:
+        case SDL_EVENT_TEXT_INPUT:
+        case SDL_EVENT_KEYMAP_CHANGED:
+            if (!ImGui::GetIO().WantCaptureKeyboard)
+            {
+                m_Input.OnEvent(event);
+            }
+            break;
+        default:
+            m_Input.OnEvent(event);
     }
 }

@@ -21,8 +21,13 @@ void Camera::FollowPlayer(Math::float2 position, Math::float2 offset, Math::floa
     constexpr float positionHalfLifeSeconds = 0.15f;
 
     float targetRotation = std::atan2f(down.y, down.x) + Math::PI / 2.0f;
-    transform.rotation = Math::LerpSmooth(transform.rotation, targetRotation, deltaTime, rotationHalfLifeSeconds);
+    transform.rotation = Math::LerpAngleSmooth(transform.rotation, targetRotation, deltaTime, rotationHalfLifeSeconds);
 
     Math::float2 targetPosition = position + Math::RotateVector(offset, transform.rotation);
     transform.position = Math::LerpSmooth(transform.position, targetPosition, deltaTime, positionHalfLifeSeconds);
+
+    if (Math::DistanceSquared(transform.position, position) > 1.0f)
+    {
+        transform.position = position + Math::Normalize(transform.position - position);
+    }
 }

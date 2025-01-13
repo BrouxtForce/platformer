@@ -211,6 +211,12 @@ namespace Math
         );
     }
 
+    float LerpAngleSmooth(float alpha, float beta, float deltaTime, float halfLifeSeconds)
+    {
+        Math::float2 direction = LerpSmooth(Direction(alpha), Direction(beta), deltaTime, halfLifeSeconds);
+        return std::atan2f(direction.y, direction.x);
+    }
+
     float2 Direction(float angle)
     {
         return float2(std::cos(angle), std::sin(angle));

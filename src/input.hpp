@@ -10,13 +10,14 @@ enum class Key
 {
     Up, Left, Down, Right,
     Jump,
+    Boost,
 
     Count
 };
 
 constexpr static inline std::array<std::string_view, (int)Key::Count> KeyNames
 {
-    "Up", "Left", "Down", "Right", "Jump"
+    "Up", "Left", "Down", "Right", "Jump", "Boost"
 };
 
 class Input

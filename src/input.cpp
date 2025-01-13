@@ -7,11 +7,12 @@
 
 Input::Input()
 {
-    controls[(int)Key::Up]    = { SDL_SCANCODE_W, SDL_SCANCODE_UP,    SDL_SCANCODE_UNKNOWN };
-    controls[(int)Key::Left]  = { SDL_SCANCODE_A, SDL_SCANCODE_LEFT,  SDL_SCANCODE_UNKNOWN };
-    controls[(int)Key::Down]  = { SDL_SCANCODE_S, SDL_SCANCODE_DOWN,  SDL_SCANCODE_UNKNOWN };
-    controls[(int)Key::Right] = { SDL_SCANCODE_D, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UNKNOWN };
-    controls[(int)Key::Jump]  = { SDL_SCANCODE_W, SDL_SCANCODE_UP,    SDL_SCANCODE_SPACE };
+    controls[(int)Key::Up]    = { SDL_SCANCODE_W,      SDL_SCANCODE_UP,    SDL_SCANCODE_UNKNOWN };
+    controls[(int)Key::Left]  = { SDL_SCANCODE_A,      SDL_SCANCODE_LEFT,  SDL_SCANCODE_UNKNOWN };
+    controls[(int)Key::Down]  = { SDL_SCANCODE_S,      SDL_SCANCODE_DOWN,  SDL_SCANCODE_UNKNOWN };
+    controls[(int)Key::Right] = { SDL_SCANCODE_D,      SDL_SCANCODE_RIGHT, SDL_SCANCODE_UNKNOWN };
+    controls[(int)Key::Jump]  = { SDL_SCANCODE_W,      SDL_SCANCODE_UP,    SDL_SCANCODE_SPACE };
+    controls[(int)Key::Boost] = { SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_UNKNOWN };
 }
 
 Math::float2 Input::Joystick() const

@@ -4,8 +4,10 @@
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
 
-void Player::Move(const Scene& scene, Math::float2 input, bool jump)
+void Player::Move(const Scene& scene, const Input& input)
 {
+    Math::float2 prevGravityDirection = gravityDirection;
+
     std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection, &m_ClosestEndDirection);
     if (gravity.has_value())
     {
@@ -18,8 +20,22 @@ void Player::Move(const Scene& scene, Math::float2 input, bool jump)
         m_ClosestDirectionUsed = true;
     }
 
-    velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.x * acceleration;
-    velocity *= drag;
+    float velocityRotationAngle = -std::acos(std::clamp(Math::Dot(prevGravityDirection, gravityDirection), -1.0f, 1.0f));
+    if (Math::Dot(prevGravityDirection, { -gravityDirection.y, gravityDirection.x }) < 0.0f)
+    {
+        velocityRotationAngle = -velocityRotationAngle;
+    }
+    velocity = Math::RotateVector(velocity, velocityRotationAngle);
+
+    if (input.IsKeyDown(Key::Boost))
+    {
+        velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.Joystick().x * boostAcceleration;
+    }
+    else
+    {
+        velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.Joystick().x * acceleration;
+        velocity *= drag;
+    }
 
     m_Entity->transform.position += Physics::CollideAndSlide(
         scene, m_Entity->transform, velocity,
@@ -33,7 +49,7 @@ void Player::Move(const Scene& scene, Math::float2 input, bool jump)
     gravityVelocity += gravityDirection * gravityAcceleration;
 
     m_JumpFrames++;
-    if (jump)
+    if (input.IsKeyPressed(Key::Jump))
     {
         m_JumpFrames = 0;
     }
