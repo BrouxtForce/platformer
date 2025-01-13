@@ -7,6 +7,7 @@ Player::Player(Entity* entity)
 void Player::Move(const Scene& scene, const Input& input)
 {
     Math::float2 prevGravityDirection = gravityDirection;
+    Transform prevTransform = m_Entity->transform;
 
     std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection, &m_ClosestEndDirection);
     if (gravity.has_value())
@@ -88,6 +89,11 @@ void Player::Move(const Scene& scene, const Input& input)
             return true;
         }
     );
+
+    if (Physics::EllipseCast(scene, prevTransform, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::DeathZone).collided)
+    {
+        m_Entity->transform.position = spawnPoint;
+    }
 }
 
 void Player::Jump()

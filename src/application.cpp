@@ -125,9 +125,9 @@ void ImGuiFlag(const char* label, uint16_t& flags, uint16_t mask)
     flags = value;
 }
 
-bool Application::LoopEditor(float /* deltaTime */)
+bool Application::LoopEditor(float deltaTime)
 {
-    m_Renderer.NewFrame();
+    m_Renderer.NewFrame(deltaTime);
 
     m_Renderer.renderHiddenEntities = true;
 
@@ -196,6 +196,8 @@ bool Application::LoopEditor(float /* deltaTime */)
         ImGuiFlag("Flag: Text",         inspectedEntity->flags, (uint16_t)EntityFlags::Text);
         ImGuiFlag("Flag: Hidden",       inspectedEntity->flags, (uint16_t)EntityFlags::Hidden);
         ImGuiFlag("Flag: Light",        inspectedEntity->flags, (uint16_t)EntityFlags::Light);
+        ImGuiFlag("Flag: Lava",         inspectedEntity->flags, (uint16_t)EntityFlags::Lava);
+        ImGuiFlag("Flag: Death Zone",   inspectedEntity->flags, (uint16_t)EntityFlags::DeathZone);
 
         int zIndex = inspectedEntity->zIndex;
         ImGui::InputInt("Z-index", &zIndex);
@@ -239,6 +241,7 @@ bool Application::LoopEditor(float /* deltaTime */)
     ImGui::End();
 
     ImGui::Begin("Editor");
+    ImGui::ColorEdit3("Background color", (float*)&m_Scene.properties.backgroundColor);
     ImGui::DragFloat2("Camera position", (float*)&m_Camera.transform.position, 0.01f);
     ImGui::DragFloat("Camera speed", &cameraSpeed, 0.01f);
     ImGui::DragFloat("Camera scale", &m_Camera.transform.scale.x, 0.01f);
@@ -266,9 +269,9 @@ bool Application::LoopEditor(float /* deltaTime */)
     return m_Renderer.Render(m_Scene, m_Camera);
 }
 
-bool Application::LoopMainMenu(float /* deltaTime */)
+bool Application::LoopMainMenu(float deltaTime)
 {
-    m_Renderer.NewFrame();
+    m_Renderer.NewFrame(deltaTime);
 
     Math::float2 mousePosition = m_Input.GetMousePosition();
     mousePosition /= Math::float2(m_Renderer.GetWidth(), m_Renderer.GetHeight());
@@ -386,7 +389,7 @@ bool Application::LoopGame(float deltaTime)
     static double frameTime = 0.0;
     uint64_t frameStart = SDL_GetTicksNS();
 
-    m_Renderer.NewFrame();
+    m_Renderer.NewFrame(deltaTime);
 
     m_Player.Move(m_Scene, m_Input);
 

@@ -25,7 +25,7 @@ public:
 
     bool Init(SDL_Window* window);
 
-    void NewFrame();
+    void NewFrame(float deltaTime);
     bool Render(const Scene& scene, const Camera& camera);
 
     void Resize();
@@ -55,9 +55,11 @@ private:
 
     wgpu::RenderPipeline m_QuadRenderPipeline;
     wgpu::RenderPipeline m_EllipseRenderPipeline;
+    wgpu::RenderPipeline m_LavaRenderPipeline;
 
     wgpu::RenderPipeline m_QuadLightRenderPipeline;
     wgpu::RenderPipeline m_EllipseLightRenderPipeline;
+    wgpu::RenderPipeline m_LavaLightRenderPipeline;
 
     std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
 
@@ -98,6 +100,8 @@ private:
     void CreateDrawData(DrawData& drawData);
 
     Buffer m_CameraBuffer;
+    Buffer m_TimeBuffer;
+    float m_Time = 0.0f;
     wgpu::BindGroup m_CameraBindGroup;
 
     Lighting m_Lighting;

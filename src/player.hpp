@@ -19,6 +19,8 @@ public:
     Math::float2 gravityVelocity{};
     Math::float2 gravityDirection = Math::float2(0, -1.0f);
 
+    Math::float2 spawnPoint{};
+
     Player() = default;
     Player(Entity* entity);
 

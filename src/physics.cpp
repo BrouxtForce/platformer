@@ -78,12 +78,12 @@ namespace Physics
         return resultVelocity;
     }
 
-    CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity)
+    CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity, uint16_t entityFlags)
     {
         CollisionData minCollision { .collided = false, .t = INFINITY };
         for (const std::unique_ptr<Entity>& entity : scene.entities)
         {
-            if ((entity->flags & (uint16_t)EntityFlags::Collider) == 0)
+            if ((entity->flags & entityFlags) == 0)
             {
                 continue;
             }

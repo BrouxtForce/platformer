@@ -25,7 +25,7 @@ namespace Physics
 
     Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity, std::function<bool(CollisionData)> callback);
 
-    CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity);
+    CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity, uint16_t entityFlags = (uint16_t)EntityFlags::Collider);
 
     CollisionData CirclePointCollision(Math::float2 circlePosition, Math::float2 velocity, Math::float2 point);
     CollisionData CircleLineCollision(Math::float2 circlePosition, Math::float2 velocity, const Line& line);

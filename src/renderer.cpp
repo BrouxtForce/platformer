@@ -55,21 +55,73 @@ bool Renderer::Init(SDL_Window* window)
 
     m_BindGroupLayouts[GROUP_TRANSFORM_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
 
-    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Math::Matrix3x3);
-    m_BindGroupLayouts[GROUP_CAMERA_INDEX] = m_Device.createBindGroupLayout(bindGroupLayoutDescriptor);
+    {
+        std::array<WGPUBindGroupLayoutEntry, 2> bindGroupLayoutEntries {
+            WGPUBindGroupLayoutEntry {
+                .nextInChain = nullptr,
+                .binding = 0,
+                .visibility = wgpu::ShaderStage::Vertex,
+                .buffer = {
+                    .nextInChain = nullptr,
+                    .type = wgpu::BufferBindingType::Uniform,
+                    .hasDynamicOffset = false,
+                    .minBindingSize = sizeof(Math::Matrix3x3)
+                },
+                .sampler = {},
+                .texture = {},
+                .storageTexture = {}
+            },
+            WGPUBindGroupLayoutEntry {
+                .nextInChain = nullptr,
+                .binding = 1,
+                .visibility = wgpu::ShaderStage::Fragment,
+                .buffer = {
+                    .nextInChain = nullptr,
+                    .type = wgpu::BufferBindingType::Uniform,
+                    .hasDynamicOffset = false,
+                    .minBindingSize = sizeof(float)
+                },
+                .sampler = {},
+                .texture = {},
+                .storageTexture = {}
+            }
+        };
+        m_BindGroupLayouts[GROUP_CAMERA_INDEX] = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
+            .nextInChain = nullptr,
+            .label = "Camera Bind Group Layout",
+            .entryCount = bindGroupLayoutEntries.size(),
+            .entries = bindGroupLayoutEntries.data()
+        });
+    }
 
     m_CameraBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+    m_TimeBuffer = Buffer(m_Device, sizeof(float), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
 
-    wgpu::BindGroupEntry cameraBindGroupEntry;
-    cameraBindGroupEntry.binding = 0;
-    cameraBindGroupEntry.buffer = m_CameraBuffer.get();
-    cameraBindGroupEntry.offset = 0;
-    cameraBindGroupEntry.size = sizeof(Math::Matrix3x3);
+    std::array<WGPUBindGroupEntry, 2> cameraBindGroupEntries {
+        WGPUBindGroupEntry {
+            .nextInChain = nullptr,
+            .binding = 0,
+            .buffer = m_CameraBuffer.get(),
+            .offset = 0,
+            .size = m_CameraBuffer.Size(),
+            .sampler = nullptr,
+            .textureView = nullptr
+        },
+        WGPUBindGroupEntry {
+            .nextInChain = nullptr,
+            .binding = 1,
+            .buffer = m_TimeBuffer.get(),
+            .offset = 0,
+            .size = m_TimeBuffer.Size(),
+            .sampler = nullptr,
+            .textureView = nullptr
+        }
+    };
 
     wgpu::BindGroupDescriptor cameraBindGroupDescriptor{};
     cameraBindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_CAMERA_INDEX];
-    cameraBindGroupDescriptor.entryCount = 1;
-    cameraBindGroupDescriptor.entries = &cameraBindGroupEntry;
+    cameraBindGroupDescriptor.entryCount = cameraBindGroupEntries.size();
+    cameraBindGroupDescriptor.entries = cameraBindGroupEntries.data();
 
     m_CameraBindGroup = m_Device.createBindGroup(cameraBindGroupDescriptor);
 
@@ -95,10 +147,18 @@ bool Renderer::Init(SDL_Window* window)
     }
     m_EllipseRenderPipeline = renderPipeline.value();
 
+    renderPipeline = CreateRenderPipeline("lava", true, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create lava render pipeline.");
+        return false;
+    }
+    m_LavaRenderPipeline = renderPipeline.value();
+
     renderPipeline = CreateRenderPipeline("quad", false, m_Format);
     if (!renderPipeline.has_value())
     {
-        Log::Error("Failed to create ellipse render pipeline.");
+        Log::Error("Failed to create quad render pipeline.");
         return false;
     }
     m_QuadLightRenderPipeline = renderPipeline.value();
@@ -110,6 +170,14 @@ bool Renderer::Init(SDL_Window* window)
         return false;
     }
     m_EllipseLightRenderPipeline = renderPipeline.value();
+
+    renderPipeline = CreateRenderPipeline("lava", false, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create lava render pipeline.");
+        return false;
+    }
+    m_LavaLightRenderPipeline = renderPipeline.value();
 
     if (!m_Lighting.Init(m_Device, m_ShaderLibrary))
     {
@@ -149,8 +217,10 @@ bool Renderer::Init(SDL_Window* window)
     return true;
 }
 
-void Renderer::NewFrame()
+void Renderer::NewFrame(float deltaTime)
 {
+    m_Time += deltaTime;
+
     ImGui_ImplWGPU_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -218,6 +288,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     Math::Matrix3x3 viewMatrix = camera.GetMatrix();
     m_CameraBuffer.Write(m_Queue, viewMatrix);
+    m_TimeBuffer.Write(m_Queue, m_Time);
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
@@ -249,6 +320,13 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             // "Ag" is an approximation of the entire alphabet
             float height = m_FontAtlas.MeasureTextHeight("Ag");
             m_FontAtlas.RenderText(m_Queue, renderEncoder, entity->name, 1.0f, 2.0f / height, 0.0f);
+            continue;
+        }
+
+        if (entity->flags & (uint16_t)EntityFlags::Lava)
+        {
+            renderEncoder.setPipeline(m_LavaRenderPipeline);
+            renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
 
@@ -349,6 +427,13 @@ void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::Textur
         drawData.transformBuffer.Write(m_Queue, transformData);
         renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
+
+        if (entity->flags & (uint16_t)EntityFlags::Lava)
+        {
+            renderEncoder.setPipeline(m_LavaLightRenderPipeline);
+            renderEncoder.draw(4, 1, 0, 0);
+            continue;
+        }
 
         switch (entity->shape)
         {

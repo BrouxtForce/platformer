@@ -26,7 +26,9 @@ enum class EntityFlags : uint16_t
     Hidden      = 1 << 3,
     Light       = 1 << 4,
     Player      = 1 << 5,
-    Destroyed   = 1 << 6
+    Destroyed   = 1 << 6,
+    Lava        = 1 << 7,
+    DeathZone   = 1 << 8
 };
 
 struct GravityZone

@@ -15,6 +15,8 @@ var<uniform> transform: Transform;
 
 @group(2) @binding(0)
 var<uniform> viewMatrix: mat3x3f;
+@group(2) @binding(1)
+var<uniform> time: f32;
 
 const QuadPositions: array<vec2f, 4> = array<vec2f, 4>(
     vec2f(-1, -1),
