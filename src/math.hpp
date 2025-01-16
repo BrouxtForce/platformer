@@ -65,6 +65,20 @@ namespace Math
         float3 operator/(const float3& other) const;
     };
 
+    struct Complex
+    {
+        float a = 0.0f;
+        float b = 0.0f;
+
+        Complex(float a, float b);
+
+        static Complex FromAngle(float rotation);
+
+        float2 operator*(const float2& other) const;
+    };
+
+    float2 operator*(const float2& left, const Complex& right);
+
     struct Color
     {
         float r = 0.0f;
@@ -115,4 +129,5 @@ namespace Math
     constexpr double PI = M_PI;
     constexpr double RAD_TO_DEG = 180.0 / PI;
     constexpr double DEG_TO_RAD = PI / 180.0;
+    constexpr double SQRT_2 = M_SQRT2;
 }

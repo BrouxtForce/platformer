@@ -13,10 +13,21 @@ namespace Physics
             {
                 continue;
             }
+            Math::float2 rotatedPosition = entity->transform.position + Math::RotateVector(position - entity->transform.position, -entity->transform.rotation);
             switch (entity->shape)
             {
-                case Shape::Rectangle:
+                case Shape::Rectangle: {
+                    Math::float2 min = entity->transform.position - entity->transform.scale;
+                    Math::float2 max = entity->transform.position + entity->transform.scale;
+                    if (rotatedPosition.x >= min.x && rotatedPosition.x <= max.x &&
+                        rotatedPosition.y >= min.y && rotatedPosition.y <= max.y)
+                    {
+                        Math::float2 direction = Math::Direction(entity->transform.rotation - Math::PI / 2.0f);
+                        *closestEndDirection = direction;
+                        return direction;
+                    }
                     break;
+                }
                 case Shape::Ellipse: {
                     Math::float2 zoneCenter = entity->transform.position;
                     float zoneRadius = entity->transform.scale.x;
@@ -197,11 +208,12 @@ namespace Physics
         rect.position /= ellipse.scale;
         rect.scale /= ellipse.scale;
 
+        Math::Complex rectRotation = Math::Complex::FromAngle(rect.rotation);
         std::array<Math::float2, 4> corners {
-            rect.position - rect.scale,
-            Math::float2(rect.position.x + rect.scale.x, rect.position.y - rect.scale.y),
-            rect.position + rect.scale,
-            Math::float2(rect.position.x - rect.scale.x, rect.position.y + rect.scale.y)
+            rect.position + rectRotation * -rect.scale,
+            rect.position + rectRotation * Math::float2(rect.scale.x, -rect.scale.y),
+            rect.position + rectRotation * rect.scale,
+            rect.position + rectRotation * Math::float2(-rect.scale.x, rect.scale.y)
         };
 
         CollisionData minCollision { .collided = false, .t = INFINITY };

@@ -74,7 +74,7 @@ bool Renderer::Init(SDL_Window* window)
             WGPUBindGroupLayoutEntry {
                 .nextInChain = nullptr,
                 .binding = 1,
-                .visibility = wgpu::ShaderStage::Fragment,
+                .visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment,
                 .buffer = {
                     .nextInChain = nullptr,
                     .type = wgpu::BufferBindingType::Uniform,
@@ -154,6 +154,14 @@ bool Renderer::Init(SDL_Window* window)
         return false;
     }
     m_LavaRenderPipeline = renderPipeline.value();
+
+    renderPipeline = CreateRenderPipeline("gravity-zone", true, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create gravity zone render pipeline.");
+        return false;
+    }
+    m_GravityZoneRenderPipeline = renderPipeline.value();
 
     renderPipeline = CreateRenderPipeline("quad", false, m_Format);
     if (!renderPipeline.has_value())
@@ -293,9 +301,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
-        if (!renderHiddenEntities &&
-            (entity->flags & (uint16_t)EntityFlags::GravityZone ||
-             entity->flags & (uint16_t)EntityFlags::Hidden))
+        if (!renderHiddenEntities && entity->flags & (uint16_t)EntityFlags::Hidden)
         {
             continue;
         }
@@ -333,7 +339,14 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         switch (entity->shape)
         {
             case Shape::Rectangle:
-                renderEncoder.setPipeline(m_QuadRenderPipeline);
+                if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+                {
+                    renderEncoder.setPipeline(m_GravityZoneRenderPipeline);
+                }
+                else
+                {
+                    renderEncoder.setPipeline(m_QuadRenderPipeline);
+                }
                 break;
             case Shape::Ellipse:
                 renderEncoder.setPipeline(m_EllipseRenderPipeline);
@@ -521,8 +534,10 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
         Log::Error("Shader '" + shader + "' does not exist.");
         return std::nullopt;
     }
-    const std::string vertexEntry = shader + "_vert";
-    const std::string fragmentEntry = shader + "_frag";
+    std::string vertexEntry = shader + "_vert";
+    std::string fragmentEntry = shader + "_frag";
+    std::replace(vertexEntry.begin(), vertexEntry.end(), '-', '_');
+    std::replace(fragmentEntry.begin(), fragmentEntry.end(), '-', '_');
 
     const std::string pipelineName = shader + " Render Pipeline";
 

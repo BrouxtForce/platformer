@@ -86,13 +86,14 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
+        Math::float2 rotatedWorldPosition = entity->transform.position + Math::RotateVector(worldPosition - entity->transform.position, -entity->transform.rotation);
         switch (entity->shape)
         {
             case Shape::Ellipse:
             {
                 float distanceSquared = Math::DistanceSquared(
                     entity->transform.position / entity->transform.scale,
-                    worldPosition / entity->transform.scale
+                    rotatedWorldPosition / entity->transform.scale
                 );
                 if (distanceSquared <= 1.0f)
                 {
@@ -104,8 +105,8 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
             {
                 Math::float2 min = entity->transform.position - entity->transform.scale;
                 Math::float2 max = entity->transform.position + entity->transform.scale;
-                if (worldPosition.x >= min.x && worldPosition.y >= min.y &&
-                    worldPosition.x <= max.x && worldPosition.y <= max.y)
+                if (rotatedWorldPosition.x >= min.x && rotatedWorldPosition.y >= min.y &&
+                    rotatedWorldPosition.x <= max.x && rotatedWorldPosition.y <= max.y)
                 {
                     HitEntity(entity.get());
                 }
@@ -168,6 +169,7 @@ bool Application::LoopEditor(float deltaTime)
             inspectedEntity->flags = templateEntity->flags;
             inspectedEntity->zIndex = templateEntity->zIndex;
             inspectedEntity->transform.scale = templateEntity->transform.scale;
+            inspectedEntity->transform.rotation = templateEntity->transform.rotation;
             inspectedEntity->material = templateEntity->material;
             inspectedEntity->shape = templateEntity->shape;
             inspectedEntity->gravityZone = templateEntity->gravityZone;
@@ -229,19 +231,24 @@ bool Application::LoopEditor(float deltaTime)
 
         if (inspectedEntity->flags & (uint16_t)EntityFlags::GravityZone)
         {
-            int minAngle = (int)(inspectedEntity->gravityZone.minAngle * Math::RAD_TO_DEG);
-            int maxAngle = (int)(inspectedEntity->gravityZone.maxAngle * Math::RAD_TO_DEG);
-            ImGui::Text("Radial Gravity Zone (degrees):");
-            ImGui::DragInt("Min angle", &minAngle, 1, -180, 180);
-            ImGui::DragInt("Max angle", &maxAngle, 1, -180, 180);
-            inspectedEntity->gravityZone.minAngle = minAngle * Math::DEG_TO_RAD;
-            inspectedEntity->gravityZone.maxAngle = maxAngle * Math::DEG_TO_RAD;
+            if (inspectedEntity->shape == Shape::Ellipse)
+            {
+                int minAngle = (int)std::floorf(inspectedEntity->gravityZone.minAngle * Math::RAD_TO_DEG);
+                int maxAngle = (int)std::floorf(inspectedEntity->gravityZone.maxAngle * Math::RAD_TO_DEG);
+                ImGui::Text("Radial Gravity Zone (degrees):");
+                ImGui::DragInt("Min angle", &minAngle, 1, -180, 180);
+                ImGui::DragInt("Max angle", &maxAngle, 1, -180, 180);
+                inspectedEntity->gravityZone.minAngle = minAngle * Math::DEG_TO_RAD;
+                inspectedEntity->gravityZone.maxAngle = maxAngle * Math::DEG_TO_RAD;
+            }
         }
     }
     ImGui::End();
 
     ImGui::Begin("Editor");
     ImGui::ColorEdit3("Background color", (float*)&m_Scene.properties.backgroundColor);
+    ImGui::CheckboxFlags("Lock camera Y",        (int*)&m_Scene.properties.flags, (int)Scene::Properties::Flags::LockCameraY);
+    ImGui::CheckboxFlags("Lock camera rotation", (int*)&m_Scene.properties.flags, (int)Scene::Properties::Flags::LockCameraRotation);
     ImGui::DragFloat2("Camera position", (float*)&m_Camera.transform.position, 0.01f);
     ImGui::DragFloat("Camera speed", &cameraSpeed, 0.01f);
     ImGui::DragFloat("Camera scale", &m_Camera.transform.scale.x, 0.01f);
@@ -391,15 +398,25 @@ bool Application::LoopGame(float deltaTime)
 
     m_Renderer.NewFrame(deltaTime);
 
-    m_Player.Move(m_Scene, m_Input);
+    m_Player.Move(m_Scene, m_Camera.transform.rotation, m_Input);
+
+    Math::float2 down = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
+        Math::float2(0, -1) : m_Player.gravityDirection;
+
+    Math::float2 right = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
+        Math::float2(1, 0) : Math::float2{ -m_Player.gravityDirection.y, m_Player.gravityDirection.x };
 
     Math::float2 cameraOffset = { 0.0f, 0.3f };
-    cameraOffset.x = (std::exp(Math::Length(m_Player.velocity)) - 1.0f) * 20.0f;
-    if (Math::Dot(m_Player.velocity, { -m_Player.gravityDirection.y, m_Player.gravityDirection.x }) < 0.0f)
+    cameraOffset.x = (std::exp(Math::Dot(m_Player.velocity, right)) - 1.0f) * 20.0f;
+    m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, down, deltaTime);
+    if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraY)
     {
-        cameraOffset.x *= -1.0f;
+        m_Camera.transform.position.y = 0.0f;
     }
-    m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, m_Player.gravityDirection, deltaTime);
+    if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation)
+    {
+        m_Camera.transform.rotation = 0.0f;
+    }
 
     m_Input.EndFrame();
     m_Scene.EndFrame();

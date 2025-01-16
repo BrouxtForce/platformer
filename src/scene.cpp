@@ -20,7 +20,7 @@ namespace Serialization
 
     std::ostream& operator<<(std::ostream& stream, const Transform& transform)
     {
-        stream << transform.position << ' ' << transform.scale;
+        stream << transform.position << ' ' << transform.scale << ' ' << transform.rotation;
         return stream;
     }
 
@@ -57,7 +57,7 @@ namespace Serialization
 
     std::ostream& operator<<(std::ostream& stream, const Scene::Properties& properties)
     {
-        stream << properties.backgroundColor;
+        stream << properties.backgroundColor << ' ' << properties.flags;
         return stream;
     }
 }
@@ -78,7 +78,7 @@ namespace Deserialization
 
     std::istream& operator>>(std::istream& stream, Transform& transform)
     {
-        stream >> transform.position >> transform.scale;
+        stream >> transform.position >> transform.scale >> transform.rotation;
         return stream;
     }
 
@@ -116,6 +116,7 @@ namespace Deserialization
     std::istream& operator>>(std::istream& stream, Scene::Properties& properties)
     {
         stream >> properties.backgroundColor;
+        stream >> properties.flags;
         return stream;
     }
 }

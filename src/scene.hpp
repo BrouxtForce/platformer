@@ -56,7 +56,14 @@ public:
 
     struct Properties
     {
+        enum class Flags
+        {
+            LockCameraY  = 1 << 0,
+            LockCameraRotation = 1 << 1
+        };
+
         Math::Color backgroundColor;
+        uint32_t flags = 0;
     };
 
     Properties properties;

@@ -133,6 +133,27 @@ namespace Math
         return float3(x / other.x, y / other.y, z / other.z);
     }
 
+    Complex::Complex(float a, float b)
+        : a(a), b(b) {}
+
+    Complex Complex::FromAngle(float rotation)
+    {
+        return Complex(std::cos(rotation), std::sin(rotation));
+    }
+
+    float2 Complex::operator*(const float2& other) const
+    {
+        return float2(
+            other.x * a - other.y * b,
+            other.x * b + other.y * a
+        );
+    }
+
+    float2 operator*(const float2& left, const Complex& right)
+    {
+        return right * left;
+    }
+
     Matrix3x3::Matrix3x3()
     {
         columns = {

@@ -4,7 +4,7 @@
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
 
-void Player::Move(const Scene& scene, const Input& input)
+void Player::Move(const Scene& scene, float cameraRotation, const Input& input)
 {
     Math::float2 prevGravityDirection = gravityDirection;
     Transform prevTransform = m_Entity->transform;
@@ -22,19 +22,37 @@ void Player::Move(const Scene& scene, const Input& input)
     }
 
     float velocityRotationAngle = -std::acos(std::clamp(Math::Dot(prevGravityDirection, gravityDirection), -1.0f, 1.0f));
-    if (Math::Dot(prevGravityDirection, { -gravityDirection.y, gravityDirection.x }) < 0.0f)
+    if (velocityRotationAngle > -Math::PI / 4)
     {
-        velocityRotationAngle = -velocityRotationAngle;
+        if (Math::Dot(prevGravityDirection, { -gravityDirection.y, gravityDirection.x }) < 0.0f)
+        {
+            velocityRotationAngle = -velocityRotationAngle;
+        }
+        velocity = Math::RotateVector(velocity, velocityRotationAngle);
     }
-    velocity = Math::RotateVector(velocity, velocityRotationAngle);
 
-    if (input.IsKeyDown(Key::Boost))
+    Math::float2 cameraRight = Math::Direction(cameraRotation);
+    Math::float2 cameraDown = { cameraRight.y, -cameraRight.x };
+
+    Math::float2 movement = 0.0f;
+
+    float gravityDotDown = Math::Dot(gravityDirection, cameraDown);
+    if (std::abs(gravityDotDown) < Math::SQRT_2)
     {
-        velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.Joystick().x * boostAcceleration;
+        movement = Math::float2{ std::abs(gravityDirection.y), gravityDirection.x } * input.Joystick().x;
     }
     else
     {
-        velocity += Math::float2(-gravityDirection.y, gravityDirection.x) * input.Joystick().x * acceleration;
+        movement = Math::float2{ -gravityDirection.y, gravityDirection.x } * input.Joystick().x;
+    }
+
+    if (input.IsKeyDown(Key::Boost))
+    {
+        velocity += movement * boostAcceleration;
+    }
+    else
+    {
+        velocity += movement * acceleration;
         velocity *= drag;
     }
 
@@ -93,6 +111,9 @@ void Player::Move(const Scene& scene, const Input& input)
     if (Physics::EllipseCast(scene, prevTransform, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::DeathZone).collided)
     {
         m_Entity->transform.position = spawnPoint;
+        velocity = 0.0f;
+        gravityVelocity = 0.0f;
+        gravityDirection = { 0.0f, -1.0f };
     }
 }
 
