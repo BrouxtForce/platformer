@@ -1,5 +1,10 @@
 struct Material {
     color: vec3f,
+    color_alpha: f32,
+    flags: u32,
+    value_a: f32,
+    value_b: f32,
+    value_c: f32,
 };
 
 @group(0) @binding(0)

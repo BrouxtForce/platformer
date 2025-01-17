@@ -4,7 +4,7 @@
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
 
-void Player::Move(const Scene& scene, float cameraRotation, const Input& input)
+void Player::Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input)
 {
     Math::float2 prevGravityDirection = gravityDirection;
     Transform prevTransform = m_Entity->transform;
@@ -114,6 +114,16 @@ void Player::Move(const Scene& scene, float cameraRotation, const Input& input)
         velocity = 0.0f;
         gravityVelocity = 0.0f;
         gravityDirection = { 0.0f, -1.0f };
+    }
+
+    Physics::CollisionData checkpointCollision = Physics::EllipseCast(scene, prevTransform, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::Checkpoint);
+    if (checkpointCollision.collided && checkpointCollision.entity->material.flags == 0)
+    {
+        // Cry about it
+        Entity* checkpointEntity = const_cast<Entity*>(checkpointCollision.entity);
+        spawnPoint = checkpointEntity->transform.position;
+        checkpointEntity->material.flags = 1;
+        checkpointEntity->material.value_a = currentTime;
     }
 }
 

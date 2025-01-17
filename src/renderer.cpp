@@ -163,6 +163,14 @@ bool Renderer::Init(SDL_Window* window)
     }
     m_GravityZoneRenderPipeline = renderPipeline.value();
 
+    renderPipeline = CreateRenderPipeline("checkpoint", true, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create checkpoint render pipeline.");
+        return false;
+    }
+    m_CheckpointRenderPipeline = renderPipeline.value();
+
     renderPipeline = CreateRenderPipeline("quad", false, m_Format);
     if (!renderPipeline.has_value())
     {
@@ -332,6 +340,12 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         if (entity->flags & (uint16_t)EntityFlags::Lava)
         {
             renderEncoder.setPipeline(m_LavaRenderPipeline);
+            renderEncoder.draw(4, 1, 0, 0);
+            continue;
+        }
+        if (entity->flags & (uint16_t)EntityFlags::Checkpoint)
+        {
+            renderEncoder.setPipeline(m_CheckpointRenderPipeline);
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }

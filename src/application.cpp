@@ -200,6 +200,7 @@ bool Application::LoopEditor(float deltaTime)
         ImGuiFlag("Flag: Light",        inspectedEntity->flags, (uint16_t)EntityFlags::Light);
         ImGuiFlag("Flag: Lava",         inspectedEntity->flags, (uint16_t)EntityFlags::Lava);
         ImGuiFlag("Flag: Death Zone",   inspectedEntity->flags, (uint16_t)EntityFlags::DeathZone);
+        ImGuiFlag("Flag: Checkpoint",   inspectedEntity->flags, (uint16_t)EntityFlags::Checkpoint);
 
         int zIndex = inspectedEntity->zIndex;
         ImGui::InputInt("Z-index", &zIndex);
@@ -398,7 +399,7 @@ bool Application::LoopGame(float deltaTime)
 
     m_Renderer.NewFrame(deltaTime);
 
-    m_Player.Move(m_Scene, m_Camera.transform.rotation, m_Input);
+    m_Player.Update(m_Scene, m_Camera.transform.rotation, m_Renderer.GetTime(), m_Input);
 
     Math::float2 down = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
         Math::float2(0, -1) : m_Player.gravityDirection;

@@ -33,6 +33,8 @@ public:
     inline int GetWidth()  { return m_Width; }
     inline int GetHeight() { return m_Height; }
 
+    inline float GetTime() { return m_Time; }
+
     std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, bool depthStencil, wgpu::TextureFormat format);
 
     void ImGuiDebugTextures();
@@ -57,6 +59,7 @@ private:
     wgpu::RenderPipeline m_EllipseRenderPipeline;
     wgpu::RenderPipeline m_LavaRenderPipeline;
     wgpu::RenderPipeline m_GravityZoneRenderPipeline;
+    wgpu::RenderPipeline m_CheckpointRenderPipeline;
 
     wgpu::RenderPipeline m_QuadLightRenderPipeline;
     wgpu::RenderPipeline m_EllipseLightRenderPipeline;

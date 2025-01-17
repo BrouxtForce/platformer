@@ -24,7 +24,7 @@ public:
     Player() = default;
     Player(Entity* entity);
 
-    void Move(const Scene& scene, float cameraRotation, const Input& input);
+    void Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input);
     void Jump();
 
     inline Transform& GetTransform() {

@@ -9,6 +9,10 @@
 struct Material
 {
     Math::Color color;
+    uint32_t flags{};
+    float value_a{};
+    float value_b{};
+    float value_c{};
 };
 
 enum class Shape
@@ -28,7 +32,8 @@ enum class EntityFlags : uint16_t
     Player      = 1 << 5,
     Destroyed   = 1 << 6,
     Lava        = 1 << 7,
-    DeathZone   = 1 << 8
+    DeathZone   = 1 << 8,
+    Checkpoint  = 1 << 9
 };
 
 struct GravityZone
