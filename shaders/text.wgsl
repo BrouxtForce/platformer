@@ -2,8 +2,8 @@ struct GlyphQuad
 {
     position: vec2f,
     scale: vec2f,
-    texPosition: vec2f,
-    texScale: vec2f,
+    tex_position: vec2f,
+    tex_scale: vec2f,
 };
 
 struct TextVertexOut
@@ -17,16 +17,16 @@ struct TextVertexOut
 @group(3) @binding(2) var fontSampler: sampler;
 
 @vertex
-fn text_vert(@builtin(vertex_index) vertexId: u32, @builtin(instance_index) instanceId: u32) -> TextVertexOut {
+fn text_vert(@builtin(vertex_index) vertex_id: u32, @builtin(instance_index) instance_id: u32) -> TextVertexOut {
     var out: TextVertexOut;
 
-    let glyph = glyphs[instanceId];
-    let position = QuadPositions[vertexId] * glyph.scale + glyph.position;
+    let glyph = glyphs[instance_id];
+    let position = QuadPositions[vertex_id] * glyph.scale + glyph.position;
 
-    out.position = vec4f(viewMatrix * transform.modelMatrix * vec3f(position, 1), 1);
-    out.uv = (QuadPositions[vertexId] + 1.0f) / 2.0f * glyph.texScale + glyph.texPosition;
+    out.position = vec4f(view_matrix * transform.model_matrix * vec3f(position, 1), 1);
+    out.uv = (QuadPositions[vertex_id] + 1.0f) / 2.0f * glyph.tex_scale + glyph.tex_position;
 
-    out.position.z = f32(transform.zIndex) / U16_MAX;
+    out.position.z = f32(transform.z_index) / U16_MAX;
 
     return out;
 }

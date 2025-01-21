@@ -6,15 +6,15 @@ struct VertexOut
 };
 
 @vertex
-fn lava_vert(@builtin(vertex_index) vid: u32) -> VertexOut {
+fn lava_vert(@builtin(vertex_index) vertex_id: u32) -> VertexOut {
     var out: VertexOut;
 
-    let world_position = transform.modelMatrix * vec3f(QuadPositions[vid], 1);
-    let view_position = viewMatrix * world_position;
+    let world_position = transform.model_matrix * vec3f(QuadPositions[vertex_id], 1);
+    let view_position = view_matrix * world_position;
 
     out.world_position = world_position.xy;
-    out.position = vec4f(view_position.xy, f32(transform.zIndex) / U16_MAX, 1.0);
-    out.uv = QuadPositions[vid] * 0.5f + 0.5f;
+    out.position = vec4f(view_position.xy, f32(transform.z_index) / U16_MAX, 1.0);
+    out.uv = QuadPositions[vertex_id] * 0.5f + 0.5f;
 
     return out;
 }

@@ -11,15 +11,15 @@ struct Material {
 var<uniform> material: Material;
 
 struct Transform {
-    modelMatrix: mat3x3f,
-    zIndex: u32,
+    model_matrix: mat3x3f,
+    z_index: u32,
 };
 
 @group(1) @binding(0)
 var<uniform> transform: Transform;
 
 @group(2) @binding(0)
-var<uniform> viewMatrix: mat3x3f;
+var<uniform> view_matrix: mat3x3f;
 @group(2) @binding(1)
 var<uniform> time: f32;
 

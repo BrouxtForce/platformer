@@ -12,16 +12,16 @@ struct VertexOut
 };
 
 @vertex
-fn checkpoint_vert(@builtin(vertex_index) vid: u32) -> VertexOut
+fn checkpoint_vert(@builtin(vertex_index) vertex_id: u32) -> VertexOut
 {
     var out: VertexOut;
 
-    let position = viewMatrix * transform.modelMatrix * vec3f(QuadPositions[vid], 1);
-    out.position = vec4f(position.xy, f32(transform.zIndex) / U16_MAX, 1.0);
+    let position = view_matrix * transform.model_matrix * vec3f(QuadPositions[vertex_id], 1);
+    out.position = vec4f(position.xy, f32(transform.z_index) / U16_MAX, 1.0);
 
     // Start with range vec2f([-aspect, aspect], [-1, 1])
-    let aspect = transform.modelMatrix[0][0] / transform.modelMatrix[1][1];
-    out.uv = QuadPositions[vid] * vec2f(aspect, 1.0f);
+    let aspect = transform.model_matrix[0][0] / transform.model_matrix[1][1];
+    out.uv = QuadPositions[vertex_id] * vec2f(aspect, 1.0f);
 
     var theta = 0.1f;
     if (material.flags != 0)

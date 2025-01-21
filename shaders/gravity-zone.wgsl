@@ -7,21 +7,21 @@ struct VertexOut
 };
 
 @vertex
-fn gravity_zone_vert(@builtin(vertex_index) vid: u32) -> VertexOut {
+fn gravity_zone_vert(@builtin(vertex_index) vertex_id: u32) -> VertexOut {
     var out: VertexOut;
 
-    let view_position = viewMatrix * transform.modelMatrix * vec3f(QuadPositions[vid], 1);
-    out.position = vec4f(view_position.xy, f32(transform.zIndex) / U16_MAX, 1.0);
+    let view_position = view_matrix * transform.model_matrix * vec3f(QuadPositions[vertex_id], 1);
+    out.position = vec4f(view_position.xy, f32(transform.z_index) / U16_MAX, 1.0);
 
-    let scale = vec2f(length(transform.modelMatrix[0]), length(transform.modelMatrix[1]));
-    out.scaled_model_pos_y = scale.y * QuadPositions[vid].y;
+    let scale = vec2f(length(transform.model_matrix[0]), length(transform.model_matrix[1]));
+    out.scaled_model_pos_y = scale.y * QuadPositions[vertex_id].y;
 
     const arrow_size = 0.2f;
     out.num_arrows = floor(scale.x * 2.0f / arrow_size);
 
     let padding_x = 1.0f - out.num_arrows * arrow_size / (scale.x * 2.0f);
 
-    out.arrow_pos = (QuadPositions[vid] / vec2f(1.0f - padding_x) * 0.5f + 0.5f) * out.num_arrows;
+    out.arrow_pos = (QuadPositions[vertex_id] / vec2f(1.0f - padding_x) * 0.5f + 0.5f) * out.num_arrows;
     out.arrow_pos.y *= scale.y / scale.x;
     out.arrow_pos.y += time;
 
