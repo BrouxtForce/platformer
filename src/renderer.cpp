@@ -1,8 +1,11 @@
 #include <sdl3webgpu.h>
 #include <webgpu/webgpu.hpp>
+
+#if DEBUG
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_wgpu.h>
+#endif
 
 #include "math.hpp"
 #include "renderer.hpp"
@@ -163,6 +166,14 @@ bool Renderer::Init(SDL_Window* window)
     }
     m_GravityZoneRenderPipeline = renderPipeline.value();
 
+    renderPipeline = CreateRenderPipeline("radial-gravity-zone", true, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create radial gravity zone render pipeline.");
+        return false;
+    }
+    m_RadialGravityZoneRenderPipeline = renderPipeline.value();
+
     renderPipeline = CreateRenderPipeline("checkpoint", true, m_Format);
     if (!renderPipeline.has_value())
     {
@@ -170,6 +181,14 @@ bool Renderer::Init(SDL_Window* window)
         return false;
     }
     m_CheckpointRenderPipeline = renderPipeline.value();
+
+    renderPipeline = CreateRenderPipeline("exit", true, m_Format);
+    if (!renderPipeline.has_value())
+    {
+        Log::Error("Failed to create exit render pipeline.");
+        return false;
+    }
+    m_ExitRenderPipeline = renderPipeline.value();
 
     renderPipeline = CreateRenderPipeline("quad", false, m_Format);
     if (!renderPipeline.has_value())
@@ -215,6 +234,7 @@ bool Renderer::Init(SDL_Window* window)
 
     Resize();
 
+#if DEBUG
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui_ImplSDL3_InitForOther(window);
@@ -229,6 +249,7 @@ bool Renderer::Init(SDL_Window* window)
     wgpuInitInfo.DepthStencilFormat = s_DepthStencilFormat;
 
     ImGui_ImplWGPU_Init(&wgpuInitInfo);
+#endif
 
     return true;
 }
@@ -237,9 +258,11 @@ void Renderer::NewFrame(float deltaTime)
 {
     m_Time += deltaTime;
 
+#if DEBUG
     ImGui_ImplWGPU_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+#endif
     m_FontAtlas.NewFrame();
 }
 
@@ -349,6 +372,12 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
+        if (entity->flags & (uint16_t)EntityFlags::Exit)
+        {
+            renderEncoder.setPipeline(m_ExitRenderPipeline);
+            renderEncoder.draw(4, 1, 0, 0);
+            continue;
+        }
 
         switch (entity->shape)
         {
@@ -363,7 +392,14 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
                 }
                 break;
             case Shape::Ellipse:
-                renderEncoder.setPipeline(m_EllipseRenderPipeline);
+                if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+                {
+                    renderEncoder.setPipeline(m_RadialGravityZoneRenderPipeline);
+                }
+                else
+                {
+                    renderEncoder.setPipeline(m_EllipseRenderPipeline);
+                }
                 break;
             default:
                 assert(false);
@@ -376,21 +412,27 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     RenderLighting(commandEncoder, m_Lighting.m_RadianceTextureView, scene, camera);
     m_Lighting.Render(m_Queue, commandEncoder, textureView);
+
+#if DEBUG
     ImGui::Image(m_Lighting.m_JumpFlood.GetSDFTextureView(), ImVec2(256, 256));
     ImGui::Image(m_Lighting.m_RadianceTextureView, ImVec2(256, 256));
     for (wgpu::TextureView view : m_Lighting.m_CascadeTextureSliceViews)
     {
         ImGui::Image(view, ImVec2(256, 256));
     }
+#endif
 
     renderPassColorAttachment.loadOp = wgpu::LoadOp::Load;
     renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
+#if DEBUG
     ImGui::Render();
     ImDrawData* drawData = ImGui::GetDrawData();
     // TODO: FramebufferScale was incorrect while resizing to fullscreen, so we'll stick to (1, 1) for now. Dear ImGui bug?
     drawData->FramebufferScale = ImVec2(1.0f, 1.0f);
     ImGui_ImplWGPU_RenderDrawData(drawData, renderEncoder);
+#endif
+
     renderEncoder.end();
     renderEncoder.release();
 
@@ -626,7 +668,9 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
 
 void Renderer::ImGuiDebugTextures()
 {
+#if DEBUG
     ImGui::Image(m_FontAtlas.GetTextureView(), ImVec2(256, 256));
+#endif
 }
 
 bool Renderer::LoadAdapterSync()

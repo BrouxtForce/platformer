@@ -21,7 +21,17 @@ namespace Physics
         Math::float2 to = 0.0f;
     };
 
-    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity, Math::float2* closestEndDirection);
+    struct GravityZoneInfo
+    {
+        bool active{};
+        Shape shape{};
+        Math::float2 direction{};
+        Math::float2 closestEndDirection{};
+        Math::float2 position{};
+        float radius{};
+    };
+
+    GravityZoneInfo GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity);
 
     Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity, std::function<bool(CollisionData)> callback);
 

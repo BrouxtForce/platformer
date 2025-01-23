@@ -1,8 +1,10 @@
 #include "application.hpp"
 
+#if DEBUG
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_stdlib.h>
+#endif
 
 #include "log.hpp"
 #include "utility.hpp"
@@ -51,7 +53,7 @@ bool Application::Loop(float deltaTime)
     {
         return LoopMainMenu(TARGET_DELTA_TIME);
     }
-    if (m_GameState == GameState::Game)
+    if (m_GameState == GameState::Game || m_GameState == GameState::FinishingLevel)
     {
         return LoopGame(TARGET_DELTA_TIME);
     }
@@ -119,12 +121,14 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
     return closestEntity;
 }
 
+#if DEBUG
 void ImGuiFlag(const char* label, uint16_t& flags, uint16_t mask)
 {
     uint32_t value = flags;
     ImGui::CheckboxFlags(label, &value, mask);
     flags = value;
 }
+#endif
 
 bool Application::LoopEditor(float deltaTime)
 {
@@ -187,6 +191,7 @@ bool Application::LoopEditor(float deltaTime)
         templateEntity = nullptr;
     }
 
+#if DEBUG
     ImGui::Begin("Inspector");
     if (inspectedEntity != nullptr)
     {
@@ -201,6 +206,7 @@ bool Application::LoopEditor(float deltaTime)
         ImGuiFlag("Flag: Lava",         inspectedEntity->flags, (uint16_t)EntityFlags::Lava);
         ImGuiFlag("Flag: Death Zone",   inspectedEntity->flags, (uint16_t)EntityFlags::DeathZone);
         ImGuiFlag("Flag: Checkpoint",   inspectedEntity->flags, (uint16_t)EntityFlags::Checkpoint);
+        ImGuiFlag("Flag: Exit",         inspectedEntity->flags, (uint16_t)EntityFlags::Exit);
 
         int zIndex = inspectedEntity->zIndex;
         ImGui::InputInt("Z-index", &zIndex);
@@ -268,6 +274,7 @@ bool Application::LoopEditor(float deltaTime)
     }
 
     ImGui::End();
+#endif
 
     m_Input.EndFrame();
     m_Scene.EndFrame();
@@ -384,7 +391,9 @@ bool Application::LoopMainMenu(float deltaTime)
     m_Input.EndFrame();
     m_Scene.EndFrame();
 
+#if DEBUG
     ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
+#endif
 
     m_Renderer.Resize();
 
@@ -399,29 +408,47 @@ bool Application::LoopGame(float deltaTime)
 
     m_Renderer.NewFrame(deltaTime);
 
-    m_Player.Update(m_Scene, m_Camera.transform.rotation, m_Renderer.GetTime(), m_Input);
-
-    Math::float2 down = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
-        Math::float2(0, -1) : m_Player.gravityDirection;
-
-    Math::float2 right = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
-        Math::float2(1, 0) : Math::float2{ -m_Player.gravityDirection.y, m_Player.gravityDirection.x };
-
-    Math::float2 cameraOffset = { 0.0f, 0.3f };
-    cameraOffset.x = (std::exp(Math::Dot(m_Player.velocity, right)) - 1.0f) * 20.0f;
-    m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, down, deltaTime);
-    if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraY)
+    if (m_GameState == GameState::Game)
     {
-        m_Camera.transform.position.y = 0.0f;
+        bool finishedLevel = false;
+        m_Player.Update(m_Scene, m_Camera.transform.rotation, m_Renderer.GetTime(), m_Input, &finishedLevel);
+        if (finishedLevel)
+        {
+            m_GameState = GameState::FinishingLevel;
+        }
+
+        Math::float2 down = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
+            Math::float2(0, -1) : m_Player.gravityDirection;
+
+        Math::float2 right = m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation ?
+            Math::float2(1, 0) : Math::float2{ -m_Player.gravityDirection.y, m_Player.gravityDirection.x };
+
+        Math::float2 cameraOffset = { 0.0f, 0.3f };
+        cameraOffset.x = (std::exp(Math::Dot(m_Player.velocity, right)) - 1.0f) * 20.0f;
+        m_Camera.FollowPlayer(m_Player.GetTransform().position, cameraOffset, down, deltaTime);
+        if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraY)
+        {
+            m_Camera.transform.position.y = 0.0f;
+        }
+        if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation)
+        {
+            m_Camera.transform.rotation = 0.0f;
+        }
     }
-    if (m_Scene.properties.flags & (uint32_t)Scene::Properties::Flags::LockCameraRotation)
+    else
     {
-        m_Camera.transform.rotation = 0.0f;
+        assert(m_GameState == GameState::FinishingLevel);
+        if (m_LevelFinishCounter++ > s_LevelFinishFrames)
+        {
+            m_LevelFinishCounter = 0;
+            m_GameState = GameState::MainMenu_MainMenu;
+        }
     }
 
     m_Input.EndFrame();
     m_Scene.EndFrame();
 
+#if DEBUG
     ImGui::Text("CPU: %fms", frameTime);
     ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);
     ImGui::Text("Camera position: (%f, %f)", m_Camera.transform.position.x, m_Camera.transform.position.y);
@@ -439,6 +466,7 @@ bool Application::LoopGame(float deltaTime)
         m_Renderer.ImGuiDebugTextures();
         ImGui::TreePop();
     }
+#endif
 
     m_Renderer.Resize();
     m_Camera.aspect = (float)m_Renderer.GetWidth() / (float)m_Renderer.GetHeight();
@@ -454,7 +482,9 @@ void Application::Exit()
 
 void Application::OnEvent(const SDL_Event& event)
 {
+#if DEBUG
     ImGui_ImplSDL3_ProcessEvent(&event);
+#endif
     switch (event.type)
     {
         case SDL_EVENT_MOUSE_MOTION:
@@ -463,7 +493,9 @@ void Application::OnEvent(const SDL_Event& event)
         case SDL_EVENT_MOUSE_WHEEL:
         case SDL_EVENT_MOUSE_ADDED:
         case SDL_EVENT_MOUSE_REMOVED:
+#if DEBUG
             if (!ImGui::GetIO().WantCaptureMouse)
+#endif
             {
                 m_Input.OnEvent(event);
             }
@@ -473,7 +505,9 @@ void Application::OnEvent(const SDL_Event& event)
         case SDL_EVENT_TEXT_EDITING:
         case SDL_EVENT_TEXT_INPUT:
         case SDL_EVENT_KEYMAP_CHANGED:
+#if DEBUG
             if (!ImGui::GetIO().WantCaptureKeyboard)
+#endif
             {
                 m_Input.OnEvent(event);
             }

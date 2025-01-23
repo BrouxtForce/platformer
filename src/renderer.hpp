@@ -59,7 +59,9 @@ private:
     wgpu::RenderPipeline m_EllipseRenderPipeline;
     wgpu::RenderPipeline m_LavaRenderPipeline;
     wgpu::RenderPipeline m_GravityZoneRenderPipeline;
+    wgpu::RenderPipeline m_RadialGravityZoneRenderPipeline;
     wgpu::RenderPipeline m_CheckpointRenderPipeline;
+    wgpu::RenderPipeline m_ExitRenderPipeline;
 
     wgpu::RenderPipeline m_QuadLightRenderPipeline;
     wgpu::RenderPipeline m_EllipseLightRenderPipeline;

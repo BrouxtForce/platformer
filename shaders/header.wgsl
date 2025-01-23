@@ -31,4 +31,5 @@ const QuadPositions: array<vec2f, 4> = array<vec2f, 4>(
 );
 
 const U16_MAX = 0x1p16f - 1.0f;
+const PI  = 3.14159265359f;
 const TAU = 6.28318530718f;

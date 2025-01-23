@@ -4,22 +4,23 @@
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
 
-void Player::Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input)
+void Player::Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input, bool* finishedLevel)
 {
     Math::float2 prevGravityDirection = gravityDirection;
     Transform prevTransform = m_Entity->transform;
 
-    std::optional<Math::float2> gravity = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection, &m_ClosestEndDirection);
-    if (gravity.has_value())
+    Physics::GravityZoneInfo gravityZoneInfo = Physics::GetGravity(scene, m_Entity->transform.position, gravityDirection);
+    if (gravityZoneInfo.active)
     {
-        gravityDirection = gravity.value();
-        m_ClosestDirectionUsed = false;
+        gravityDirection = gravityZoneInfo.direction;
     }
-    else if (!m_ClosestDirectionUsed)
+    else if (m_PrevGravityZoneInfo.active && m_PrevGravityZoneInfo.shape == Shape::Ellipse &&
+        Math::Distance(m_Entity->transform.position, m_PrevGravityZoneInfo.position) < m_PrevGravityZoneInfo.radius)
     {
-        gravityDirection = m_ClosestEndDirection;
-        m_ClosestDirectionUsed = true;
+        gravityDirection = m_PrevGravityZoneInfo.closestEndDirection;
+        m_PrevGravityZoneInfo.active = false;
     }
+    m_PrevGravityZoneInfo = gravityZoneInfo;
 
     float velocityRotationAngle = -std::acos(std::clamp(Math::Dot(prevGravityDirection, gravityDirection), -1.0f, 1.0f));
     if (velocityRotationAngle > -Math::PI / 4)
@@ -34,17 +35,28 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
     Math::float2 cameraRight = Math::Direction(cameraRotation);
     Math::float2 cameraDown = { cameraRight.y, -cameraRight.x };
 
-    Math::float2 movement = 0.0f;
-
-    float gravityDotDown = Math::Dot(gravityDirection, cameraDown);
-    if (std::abs(gravityDotDown) < Math::SQRT_2)
+    float horizontalInput = input.Joystick().x;
+    bool maintainShouldFlipInput = true;
+    if (horizontalInput == 0.0f || m_PrevHorizontalInput == 0.0f ||
+        horizontalInput > 0.0f != m_PrevHorizontalInput > 0.0f)
     {
-        movement = Math::float2{ std::abs(gravityDirection.y), gravityDirection.x } * input.Joystick().x;
+        maintainShouldFlipInput = false;
     }
-    else
+    if (!gravityZoneInfo.active || gravityZoneInfo.shape != Shape::Ellipse)
     {
-        movement = Math::float2{ -gravityDirection.y, gravityDirection.x } * input.Joystick().x;
+        maintainShouldFlipInput = true;
+        m_ShouldFlipInput = gravityDirection.y > Math::SQRT_2 / 2.0f;
     }
+    Math::float2 movement = Math::float2{ -gravityDirection.y, gravityDirection.x } * horizontalInput;
+    if (!maintainShouldFlipInput)
+    {
+        m_ShouldFlipInput = movement.x >= 0.0f != horizontalInput >= 0.0f;
+    }
+    if (m_ShouldFlipInput)
+    {
+        movement = -movement;
+    }
+    m_PrevHorizontalInput = horizontalInput;
 
     if (input.IsKeyDown(Key::Boost))
     {
@@ -124,6 +136,18 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
         spawnPoint = checkpointEntity->transform.position;
         checkpointEntity->material.flags = 1;
         checkpointEntity->material.value_a = currentTime;
+    }
+
+    Transform prevTransformPoint = prevTransform;
+    prevTransformPoint.scale = 0.001f;
+    Physics::CollisionData exitCollision = Physics::EllipseCast(scene, prevTransformPoint, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::Exit);
+    if (exitCollision.collided && exitCollision.entity->material.flags == 0)
+    {
+        // Cry about it
+        Entity* exitEntity = const_cast<Entity*>(exitCollision.entity);
+        exitEntity->material.flags = 1;
+        exitEntity->material.value_a = currentTime;
+        *finishedLevel = true;
     }
 }
 

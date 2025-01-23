@@ -2,6 +2,7 @@
 
 #include "math.hpp"
 
+#include "physics.hpp"
 #include "scene.hpp"
 #include "input.hpp"
 
@@ -24,7 +25,7 @@ public:
     Player() = default;
     Player(Entity* entity);
 
-    void Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input);
+    void Update(const Scene& scene, float cameraRotation, float currentTime, const Input& input, bool* finishedLevel);
     void Jump();
 
     inline Transform& GetTransform() {
@@ -36,12 +37,14 @@ private:
 
     bool m_IsOnGround = false;
 
-    Math::float2 m_ClosestEndDirection = 0.0f;
-    bool m_ClosestDirectionUsed = true;
+    Physics::GravityZoneInfo m_PrevGravityZoneInfo{};
 
     static constexpr int s_MaxCoyoteFrames = 5;
     int m_CoyoteFrames = s_MaxCoyoteFrames + 1;
 
     static constexpr int s_MaxJumpFrames = 5;
     int m_JumpFrames = s_MaxCoyoteFrames + 1;
+
+    float m_PrevHorizontalInput = 0.0f;
+    bool m_ShouldFlipInput = false;
 };

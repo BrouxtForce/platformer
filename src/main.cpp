@@ -8,6 +8,10 @@
 #include "application.hpp"
 #include "log.hpp"
 
+#if __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
 {
     GameState startGameState = GameState::MainMenu_MainMenu;
@@ -38,10 +42,17 @@ SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
 
 SDL_AppResult SDL_AppIterate(void* state)
 {
+#if __EMSCRIPTEN__
+    double thisFrameMs = emscripten_get_now();
+    static double lastFrameMs = thisFrameMs;
+    double deltaTime = (thisFrameMs - lastFrameMs) / 1'000.0f;
+    lastFrameMs = thisFrameMs;
+#else
     uint64_t thisFrameTicks = SDL_GetTicksNS();
     static uint64_t lastFrameTicks = thisFrameTicks;
     double deltaTime = (double)(thisFrameTicks - lastFrameTicks) / 1'000'000'000.0;
     lastFrameTicks = thisFrameTicks;
+#endif
 
     Application* application = (Application*)state;
     if (application->Loop(deltaTime))

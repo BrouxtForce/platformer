@@ -18,6 +18,8 @@ enum class GameState
     Game   = 1 << 2,
     Editor = 1 << 3,
 
+    FinishingLevel = 1 << 4,
+
     MainMenu = MainMenu_MainMenu | MainMenu_Controls
 };
 
@@ -38,7 +40,7 @@ private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
 
-    static constexpr std::string_view firstSceneFilepath = "assets/scenes/city.txt";
+    static constexpr std::string_view firstSceneFilepath = "assets/scenes/castle.txt";
 
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;
@@ -47,6 +49,9 @@ private:
     std::array<int, 2> m_ActiveControlRebind = { -1, -1 };
 
     GameState m_GameState = GameState::MainMenu_MainMenu;
+
+    static constexpr uint16_t s_LevelFinishFrames = 420;
+    uint16_t m_LevelFinishCounter = 0;
 
     Menu m_Menu;
 

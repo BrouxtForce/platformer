@@ -5,8 +5,20 @@
 
 namespace Physics
 {
-    std::optional<Math::float2> GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity, Math::float2* closestEndDirection)
+    GravityZoneInfo GetGravity(const Scene& scene, Math::float2 position, Math::float2 currentGravity)
     {
+        GravityZoneInfo closestGravityZoneInfo { .active = false };
+        uint16_t highestZIndex = 0;
+
+        auto RegisterGravityZoneInfo = [&](const GravityZoneInfo&& info, Entity* entity)
+        {
+            if (entity->zIndex >= highestZIndex)
+            {
+                closestGravityZoneInfo = info;
+                highestZIndex = entity->zIndex;
+            }
+        };
+
         for (const std::unique_ptr<Entity>& entity : scene.entities)
         {
             if ((entity->flags & (uint16_t)EntityFlags::GravityZone) == 0)
@@ -23,8 +35,14 @@ namespace Physics
                         rotatedPosition.y >= min.y && rotatedPosition.y <= max.y)
                     {
                         Math::float2 direction = Math::Direction(entity->transform.rotation - Math::PI / 2.0f);
-                        *closestEndDirection = direction;
-                        return direction;
+                        RegisterGravityZoneInfo({
+                            .active = true,
+                            .shape = Shape::Rectangle,
+                            .direction = direction,
+                            .closestEndDirection = direction,
+                            .position = entity->transform.position,
+                            .radius = entity->transform.scale.x
+                        }, entity.get());
                     }
                     break;
                 }
@@ -44,21 +62,29 @@ namespace Physics
                     float angle = std::atan2(-direction.y, -direction.x);
                     if (angle >= entity->gravityZone.minAngle && angle <= entity->gravityZone.maxAngle)
                     {
+                        Math::float2 closestEndDirection;
                         if (std::abs(angle - entity->gravityZone.minAngle) < std::abs(angle - entity->gravityZone.maxAngle))
                         {
-                            *closestEndDirection = -Math::Direction(entity->gravityZone.minAngle);
+                            closestEndDirection = -Math::Direction(entity->gravityZone.minAngle);
                         }
                         else
                         {
-                            *closestEndDirection = -Math::Direction(entity->gravityZone.maxAngle);
+                            closestEndDirection = -Math::Direction(entity->gravityZone.maxAngle);
                         }
-                        return direction;
+                        RegisterGravityZoneInfo({
+                            .active = true,
+                            .shape = Shape::Ellipse,
+                            .direction = direction,
+                            .closestEndDirection = closestEndDirection,
+                            .position = zoneCenter,
+                            .radius = zoneRadius
+                        }, entity.get());
                     }
                     break;
                 }
             }
         }
-        return std::nullopt;
+        return closestGravityZoneInfo;
     }
 
     Math::float2 CollideAndSlide(const Scene& scene, const Transform& ellipse, Math::float2 velocity, std::function<bool(CollisionData)> callback)

@@ -33,7 +33,8 @@ enum class EntityFlags : uint16_t
     Destroyed   = 1 << 6,
     Lava        = 1 << 7,
     DeathZone   = 1 << 8,
-    Checkpoint  = 1 << 9
+    Checkpoint  = 1 << 9,
+    Exit        = 1 << 10
 };
 
 struct GravityZone

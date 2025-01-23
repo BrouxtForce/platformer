@@ -79,6 +79,10 @@ else()
     target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(game PRIVATE DEBUG=1)
+endif()
+
 if(APPLE)
     enable_language(OBJC)
 endif()
