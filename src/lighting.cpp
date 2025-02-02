@@ -21,7 +21,7 @@ Lighting::~Lighting()
 bool Lighting::Init(wgpu::Device device, const ShaderLibrary& shaderLibrary)
 {
     m_Device = device;
-    m_ShaderModule = shaderLibrary.GetShaderModule("lighting");
+    m_Shader = shaderLibrary.GetShader("lighting");
 
     // TODO: Failure?
     InitSamplers();
@@ -405,7 +405,7 @@ void Lighting::InitRenderPipelines()
     };
     WGPUFragmentState cascadeFragmentState {
         .nextInChain = nullptr,
-        .module = m_ShaderModule,
+        .module = m_Shader->shaderModule,
         .entryPoint = "merge_cascades_frag",
         .constantCount = 0,
         .constants = nullptr,
@@ -418,7 +418,7 @@ void Lighting::InitRenderPipelines()
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
-            .module = m_ShaderModule,
+            .module = m_Shader->shaderModule,
             .entryPoint = "fullscreen_quad_vert",
             .constantCount = 0,
             .constants = nullptr,
@@ -462,7 +462,7 @@ void Lighting::InitRenderPipelines()
     };
     WGPUFragmentState lightingFragmentState {
         .nextInChain = nullptr,
-        .module = m_ShaderModule,
+        .module = m_Shader->shaderModule,
         .entryPoint = "lighting_frag",
         .constantCount = 0,
         .constants = nullptr,
@@ -475,7 +475,7 @@ void Lighting::InitRenderPipelines()
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
-            .module = m_ShaderModule,
+            .module = m_Shader->shaderModule,
             .entryPoint = "fullscreen_quad_vert",
             .constantCount = 0,
             .constants = nullptr,

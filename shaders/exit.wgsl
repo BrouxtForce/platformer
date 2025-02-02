@@ -1,9 +1,11 @@
-/*
-    Note:
-    - if material.flags == 0, the exit is closed
-    - if material.flags == 1, the exit is opening/opened
-    - material.value_a is the time the exit began opening
-*/
+struct Material
+{
+    color: vec3f,
+    started: u32,
+    start_time: f32,
+};
+@group(0) @binding(0)
+var<uniform> material: Material;
 
 struct VertexOut
 {
@@ -25,14 +27,14 @@ fn exit_vert(@builtin(vertex_index) vertex_id: u32) -> VertexOut {
     out.position = vec4f(view_position.xy, f32(transform.z_index) / U16_MAX, 1.0f);
     out.uv = QuadPositions[vertex_id] * 0.5f + 0.5f;
 
-    if (material.flags == 0)
+    if (!bool(material.started))
     {
         out.open_t = 0.0f;
         out.rotation_theta = 0.0f;
     }
     else
     {
-        let time_since_open = time - material.value_a;
+        let time_since_open = time - material.start_time;
         if (time_since_open < 2.0f)
         {
             out.open_t = min(time_since_open, 0.5f) * 0.125f;

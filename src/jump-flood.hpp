@@ -12,6 +12,7 @@
 
 #include <webgpu/webgpu.hpp>
 
+class Shader;
 class ShaderLibrary;
 
 class JumpFlood
@@ -34,7 +35,7 @@ private:
     int m_Height = 0;
 
     wgpu::Device m_Device;
-    wgpu::ShaderModule m_ShaderModule;
+    const Shader* m_Shader = nullptr;
 
     static constexpr WGPUTextureFormat m_TextureFormat = WGPUTextureFormat_RG16Float;
 

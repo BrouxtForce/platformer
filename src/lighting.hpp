@@ -18,6 +18,7 @@
 #include "buffer.hpp"
 #include "jump-flood.hpp"
 
+class Shader;
 class ShaderLibrary;
 
 class Lighting
@@ -40,7 +41,7 @@ private:
     uint16_t m_Height = 0;
 
     wgpu::Device m_Device;
-    wgpu::ShaderModule m_ShaderModule;
+    const Shader* m_Shader = nullptr;
 
     JumpFlood m_JumpFlood;
 

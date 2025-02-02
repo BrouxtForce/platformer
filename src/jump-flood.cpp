@@ -28,7 +28,7 @@ void JumpFlood::Init(wgpu::Device device, int width, int height, const ShaderLib
     m_Height = height;
 
     m_Device = device;
-    m_ShaderModule = shaderLibrary.GetShaderModule("jump-flood");
+    m_Shader = shaderLibrary.GetShader("jump-flood");
 
     // TODO: Failure?
     InitTextures();
@@ -245,7 +245,7 @@ void JumpFlood::InitRenderPipelines()
     };
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
-        .module = m_ShaderModule,
+        .module = m_Shader->shaderModule,
         .entryPoint = "jump_flood_init_frag",
         .constantCount = 0,
         .constants = nullptr,
@@ -258,7 +258,7 @@ void JumpFlood::InitRenderPipelines()
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
-            .module = m_ShaderModule,
+            .module = m_Shader->shaderModule,
             .entryPoint = "jump_flood_vert",
             .constantCount = 0,
             .constants = nullptr,

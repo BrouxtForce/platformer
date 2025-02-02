@@ -1,3 +1,9 @@
+struct Material
+{
+    color: vec3f,
+};
+@group(0) @binding(0) var<uniform> material: Material;
+
 @vertex
 fn quad_vert(@builtin(vertex_index) vertex_id: u32) -> @builtin(position) vec4f {
     let pos = view_matrix * transform.model_matrix * vec3f(QuadPositions[vertex_id], 1);

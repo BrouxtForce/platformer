@@ -1,5 +1,6 @@
 #include "player.hpp"
 #include "physics.hpp"
+#include "shader-library.hpp"
 
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
@@ -129,25 +130,31 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
     }
 
     Physics::CollisionData checkpointCollision = Physics::EllipseCast(scene, prevTransform, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::Checkpoint);
-    if (checkpointCollision.collided && checkpointCollision.entity->material.flags == 0)
+    if (checkpointCollision.collided && !GetUniform<uint32_t>(checkpointCollision.entity, "started").value_or(1))
     {
         // Cry about it
         Entity* checkpointEntity = const_cast<Entity*>(checkpointCollision.entity);
         spawnPoint = checkpointEntity->transform.position;
-        checkpointEntity->material.flags = 1;
-        checkpointEntity->material.value_a = currentTime;
+        if (checkpointEntity->shader)
+        {
+            WriteUniform<uint32_t>(checkpointEntity, "started", 1);
+            WriteUniform<float>(checkpointEntity, "start_time", currentTime);
+        }
     }
 
     Transform prevTransformPoint = prevTransform;
     prevTransformPoint.scale = 0.001f;
     Physics::CollisionData exitCollision = Physics::EllipseCast(scene, prevTransformPoint, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::Exit);
-    if (exitCollision.collided && exitCollision.entity->material.flags == 0)
+    if (exitCollision.collided && !GetUniform<uint32_t>(exitCollision.entity, "started").value_or(1))
     {
         // Cry about it
         Entity* exitEntity = const_cast<Entity*>(exitCollision.entity);
-        exitEntity->material.flags = 1;
-        exitEntity->material.value_a = currentTime;
         *finishedLevel = true;
+        if (exitEntity->shader)
+        {
+            WriteUniform<uint32_t>(exitEntity, "started", 1);
+            WriteUniform<float>(exitEntity, "start_time", currentTime);
+        }
     }
 }
 

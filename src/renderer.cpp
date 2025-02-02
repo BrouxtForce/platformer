@@ -332,6 +332,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
 
     for (const std::unique_ptr<Entity>& entity : scene.entities)
     {
+        UpdateEntity(entity.get());
         if (!renderHiddenEntities && entity->flags & (uint16_t)EntityFlags::Hidden)
         {
             continue;
@@ -582,20 +583,20 @@ void Renderer::Resize()
     m_Lighting.FitToScreen(m_Width, m_Height);
 }
 
-std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shader, bool depthStencil, wgpu::TextureFormat format)
+std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shaderName, bool depthStencil, wgpu::TextureFormat format)
 {
-    wgpu::ShaderModule shaderModule = m_ShaderLibrary.GetShaderModule(shader);
-    if (!shaderModule)
+    const Shader* shader = m_ShaderLibrary.GetShader(shaderName);
+    if (!shader)
     {
-        Log::Error("Shader '" + shader + "' does not exist.");
+        Log::Error("Shader '" + shaderName + "' does not exist.");
         return std::nullopt;
     }
-    std::string vertexEntry = shader + "_vert";
-    std::string fragmentEntry = shader + "_frag";
+    std::string vertexEntry = shaderName + "_vert";
+    std::string fragmentEntry = shaderName + "_frag";
     std::replace(vertexEntry.begin(), vertexEntry.end(), '-', '_');
     std::replace(fragmentEntry.begin(), fragmentEntry.end(), '-', '_');
 
-    const std::string pipelineName = shader + " Render Pipeline";
+    const std::string pipelineName = shaderName + " Render Pipeline";
 
     WGPUColorTargetState colorTarget {
         .nextInChain = nullptr,
@@ -606,7 +607,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
 
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
-        .module = shaderModule,
+        .module = shader->shaderModule,
         .entryPoint = fragmentEntry.c_str(),
         .constantCount = 0,
         .constants = nullptr,
@@ -634,7 +635,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
         .layout = m_PipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
-            .module = shaderModule,
+            .module = shader->shaderModule,
             .entryPoint = vertexEntry.c_str(),
             .constantCount = 0,
             .constants = nullptr,
@@ -784,4 +785,49 @@ void Renderer::CreateDrawData(DrawData& drawData)
     binding.size = sizeof(TransformBindGroupData);
 
     drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
+}
+
+void Renderer::UpdateEntity(Entity* entity)
+{
+    std::string_view shaderName;
+    if (entity->flags & (uint16_t)EntityFlags::Text)
+    {
+        shaderName = "text";
+    }
+    else if (entity->flags & (uint16_t)EntityFlags::Checkpoint)
+    {
+        shaderName = "checkpoint";
+    }
+    else if (entity->flags & (uint16_t)EntityFlags::Exit)
+    {
+        shaderName = "exit";
+    }
+    else if (entity->shape == Shape::Rectangle)
+    {
+        if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+        {
+            shaderName = "gravity-zone";
+        }
+        else
+        {
+            shaderName = "quad";
+        }
+    }
+    else if (entity->shape == Shape::Ellipse)
+    {
+        if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+        {
+            shaderName = "radial-gravity-zone";
+        }
+        else
+        {
+            shaderName = "ellipse";
+        }
+    }
+    else
+    {
+        Log::Error("Could not find shader for entity");
+        return;
+    }
+    entity->shader = m_ShaderLibrary.GetShader((std::string)shaderName);
 }

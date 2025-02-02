@@ -4,6 +4,14 @@
 
 #include <cassert>
 
+void Material::WriteColor(Math::Color color)
+{
+    // By convention, color is usually the first property in the Material struct in the shader
+    data[0] = std::bit_cast<uint32_t>(color.r);
+    data[1] = std::bit_cast<uint32_t>(color.g);
+    data[2] = std::bit_cast<uint32_t>(color.b);
+}
+
 namespace Serialization
 {
     std::ostream& operator<<(std::ostream& stream, const Math::float2& vector)
@@ -26,7 +34,17 @@ namespace Serialization
 
     std::ostream& operator<<(std::ostream& stream, const Material& material)
     {
-        stream << material.color;
+        bool first = true;
+        for (uint32_t value : material.data)
+        {
+            if (!first)
+            {
+                stream << ' ';
+            }
+            first = false;
+            stream << value;
+        }
+
         return stream;
     }
 
@@ -84,7 +102,11 @@ namespace Deserialization
 
     std::istream& operator>>(std::istream& stream, Material& material)
     {
-        stream >> material.color;
+        for (uint32_t& value : material.data)
+        {
+            stream >> value;
+        }
+
         return stream;
     }
 

@@ -5,6 +5,14 @@
 
 namespace Math
 {
+    using int2 = std::array<int32_t, 2>;
+    using int3 = std::array<int32_t, 3>;
+    using int4 = std::array<int32_t, 4>;
+
+    using uint2 = std::array<uint32_t, 2>;
+    using uint3 = std::array<uint32_t, 3>;
+    using uint4 = std::array<uint32_t, 4>;
+
     struct float2
     {
         float x = 0.0f;
@@ -64,6 +72,8 @@ namespace Math
         float3 operator*(const float3& other) const;
         float3 operator/(const float3& other) const;
     };
+
+    using float4 = std::array<float, 4>;
 
     struct Complex
     {

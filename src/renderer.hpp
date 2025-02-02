@@ -118,4 +118,6 @@ private:
     FontAtlas m_FontAtlas;
 
     friend class FontAtlas;
+
+    void UpdateEntity(Entity* entity);
 };

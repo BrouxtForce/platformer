@@ -76,6 +76,7 @@ if (EMSCRIPTEN)
     )
     target_compile_options(game PRIVATE -O3)
 else()
+    set(WEBGPU_BACKEND "DAWN")
     target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
 endif()
 
@@ -92,9 +93,6 @@ set(BUILD_SHARED_LIBS OFF)
 set(SDL_SHARED OFF)
 set(SDL_STATIC ON)
 
-# Disable AVIF Support
-set(SDL3IMAGE_AVIF OFF)
-
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -103,19 +101,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
-FetchContent_Declare(
-    SDL3_image
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-    #GIT_TAG release-2.8.2
-    GIT_TAG origin/main
-)
-
-set(SDL3IMAGE_INSTALL OFF)
-set(SDL3IMAGE_BUILD_SHARED_LIBS OFF)
-
-FetchContent_MakeAvailable(SDL3_image)
-
-target_link_libraries(game PUBLIC SDL3::SDL3-static SDL3_image::SDL3_image-static)
+target_link_libraries(game PUBLIC SDL3::SDL3-static)
 
 add_subdirectory(WebGPU-distribution)
 target_link_libraries(game PRIVATE webgpu)

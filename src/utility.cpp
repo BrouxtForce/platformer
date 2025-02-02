@@ -1,8 +1,7 @@
 #include "utility.hpp"
 
 #include <SDL3/SDL.h>
-
-#include "SDL3/SDL_iostream.h"
+#include <cassert>
 #include "log.hpp"
 
 std::string GetBasePath()
@@ -96,4 +95,24 @@ std::vector<std::string> GetFilesInDirectory(const std::string& directory)
     }
 
     return filenames;
+}
+
+CharacterInputStream::CharacterInputStream(std::string_view input)
+    : input(input) {}
+
+char CharacterInputStream::Peek() const
+{
+    assert(position >= 0 && position < input.size());
+    return input[position];
+}
+
+char CharacterInputStream::Next()
+{
+    assert(position >= 0 && position < input.size());
+    return input[position++];
+}
+
+bool CharacterInputStream::Eof() const
+{
+    return position >= input.size();
 }

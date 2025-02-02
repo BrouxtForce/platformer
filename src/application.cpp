@@ -67,7 +67,7 @@ void Application::LoadScene(const std::string& sceneFilepath)
     m_Scene.Deserialize(ReadFile(sceneFilepath));
 
     Entity* playerEntity = m_Scene.CreateEntity();
-    playerEntity->material.color = Math::Color(0.5, 0.5, 0.5);
+    playerEntity->material.WriteColor({ 0.5f, 0.5f, 0.5f });
     playerEntity->transform.position = Math::float2(0.0f, 0.0f);
     playerEntity->transform.scale = Math::float2(0.1);
     playerEntity->shape = Shape::Ellipse;
@@ -219,7 +219,8 @@ bool Application::LoopEditor(float deltaTime)
         ImGui::DragInt("Rotation", &rotation);
         inspectedEntity->transform.rotation = (float)rotation * Math::DEG_TO_RAD;
 
-        ImGui::ColorEdit3("Color", (float*)&inspectedEntity->material.color);
+        // TODO: Material properties
+        // ImGui::ColorEdit3("Color", (float*)&inspectedEntity->color);
 
         static constexpr std::array<const char*, 2> shapes {
             "Rectangle", "Ellipse"

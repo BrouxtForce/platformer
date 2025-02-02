@@ -6,14 +6,15 @@
 
 #include "transform.hpp"
 
+class Shader;
 struct Material
 {
-    Math::Color color;
-    uint32_t flags{};
-    float value_a{};
-    float value_b{};
-    float value_c{};
+    static constexpr size_t SIZE = 64;
+    std::array<uint32_t, SIZE / 4> data;
+
+    void WriteColor(Math::Color color);
 };
+static_assert(sizeof(Material) == Material::SIZE);
 
 enum class Shape
 {
@@ -51,6 +52,7 @@ struct Entity
     uint16_t zIndex = 0;
     Transform transform{};
     Material material{};
+    const Shader* shader = nullptr;
     Shape shape = Shape::Rectangle;
     GravityZone gravityZone{};
 };

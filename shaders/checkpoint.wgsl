@@ -1,9 +1,11 @@
-/*
-    Note:
-    - if material.flags == 0, the checkpoint has not been collected
-    - if material.flags == 1, the checkpoint has been collected
-    - material.value_a is the time when the checkpoint was collected
-*/
+struct Material
+{
+    color: vec3f,
+    started: u32,
+    start_time: f32,
+};
+@group(0) @binding(0)
+var<uniform> material: Material;
 
 struct VertexOut
 {
@@ -24,9 +26,9 @@ fn checkpoint_vert(@builtin(vertex_index) vertex_id: u32) -> VertexOut
     out.uv = QuadPositions[vertex_id] * vec2f(aspect, 1.0f);
 
     var theta = 0.1f;
-    if (material.flags != 0)
+    if (bool(material.started))
     {
-        let x = 4.0f * (time - material.value_a);
+        let x = 4.0f * (time - material.start_time);
         theta += 0.5f * exp(-0.25f * x) * sin(x);
     }
 
@@ -53,13 +55,13 @@ fn checkpoint_frag(in: VertexOut) -> @location(0) vec4f {
                      (in.uv.x >= 0.65f && in.uv.x <= 0.75f && in.uv.y >= 0.2f && in.uv.y <= 0.8f);
 
     var color: vec3f = material.color;
-    if (material.flags != 0)
+    if (bool(material.started))
     {
-        let strength = abs(4.0f * (time - material.value_a) - length(in.uv * 2.0f - 1.0f) - 1.0f);
+        let strength = abs(4.0f * (time - material.start_time) - length(in.uv * 2.0f - 1.0f) - 1.0f);
         color += vec3f(0.5f) * clamp(sin(strength) / strength, 0.0f, 1.0f);
         if (flag)
         {
-            color = vec3f(min(2.0f * (time - material.value_a), 1.0f));
+            color = vec3f(min(2.0f * (time - material.start_time), 1.0f));
         }
     }
     else if (flag)

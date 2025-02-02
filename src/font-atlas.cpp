@@ -139,8 +139,8 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
 
     wgpu::PipelineLayout pipelineLayout = renderer.m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
-    wgpu::ShaderModule shaderModule = renderer.m_ShaderLibrary.GetShaderModule("text");
-    if (!shaderModule)
+    const Shader* textShader = renderer.m_ShaderLibrary.GetShader("text");
+    if (!textShader)
     {
         return false;
     }
@@ -149,7 +149,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     pipelineDescriptor.label = "Font Atlas Render Pipeline";
     pipelineDescriptor.layout = pipelineLayout;
 
-    pipelineDescriptor.vertex.module = shaderModule;
+    pipelineDescriptor.vertex.module = textShader->shaderModule;
     pipelineDescriptor.vertex.entryPoint = "text_vert";
 
     wgpu::BlendState blendState = wgpu::Default;
@@ -169,7 +169,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     fragmentState.targets = &colorTarget;
     fragmentState.targetCount = 1;
     fragmentState.entryPoint = "text_frag";
-    fragmentState.module = shaderModule;
+    fragmentState.module = textShader->shaderModule;
     pipelineDescriptor.fragment = &fragmentState;
 
     wgpu::DepthStencilState depthStencilState = wgpu::Default;
