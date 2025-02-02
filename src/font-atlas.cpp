@@ -363,7 +363,7 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     {
         // Not enough space in m_QuadBuffer
         constexpr size_t maxCharCount = s_QuadBufferSize / sizeof(GlyphQuad);
-        Log::Error("Font atlas RenderText() character limit reached (Max " + std::to_string(maxCharCount) + " characters).");
+        Log::Error("Font atlas RenderText() character limit reached (Max % characters).", maxCharCount);
         return;
     }
     size_t offset = m_QuadsWritten * sizeof(GlyphQuad);

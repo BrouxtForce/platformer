@@ -57,7 +57,7 @@ bool Application::Loop(float deltaTime)
     {
         return LoopGame(TARGET_DELTA_TIME);
     }
-    Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
+    Log::Error("Invalid game state: %", (int)m_GameState);
     return false;
 }
 
@@ -115,7 +115,7 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
                 break;
             }
             default:
-                Log::Warn("Invalid shape: " + std::to_string((int)entity->shape));
+                Log::Warn("Invalid shape: %", (int)entity->shape);
         }
     }
     return closestEntity;
@@ -385,7 +385,7 @@ bool Application::LoopMainMenu(float deltaTime)
             }
             break;
         default:
-            Log::Error("Invalid game state: " + std::to_string((int)m_GameState));
+            Log::Error("Invalid game state: %", (int)m_GameState);
             break;
     }
 

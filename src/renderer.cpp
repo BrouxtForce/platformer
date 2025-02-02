@@ -341,7 +341,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
         DrawData& drawData = m_EntityDrawData[entity->id];
         if (drawData.empty)
         {
-            Log::Debug("Create entity draw data (" + std::to_string(entity->id) + ")");
+            Log::Debug("Create entity draw data (%)", entity->id);
             CreateDrawData(drawData);
         }
         TransformBindGroupData transformData {
@@ -486,7 +486,7 @@ void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::Textur
         DrawData& drawData = m_EntityDrawData[entity->id];
         if (drawData.empty)
         {
-            Log::Debug("Create entity draw data (" + std::to_string(entity->id) + ")");
+            Log::Debug("Create entity draw data (%)", entity->id);
             CreateDrawData(drawData);
         }
         TransformBindGroupData transformData {
@@ -534,7 +534,7 @@ void Renderer::Resize()
     m_Width = newWidth;
     m_Height = newHeight;
 
-    Log::Debug("Resized window: " + std::to_string(m_Width) + ", " + std::to_string(m_Height));
+    Log::Debug("Resized window: %, %", m_Width, m_Height);
 
     wgpu::SurfaceConfiguration surfaceConfig;
     surfaceConfig.format = m_Format;
@@ -588,7 +588,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const Shader* shader = m_ShaderLibrary.GetShader(shaderName);
     if (!shader)
     {
-        Log::Error("Shader '" + shaderName + "' does not exist.");
+        Log::Error("Shader '%' does not exist.", shaderName);
         return std::nullopt;
     }
     std::string vertexEntry = shaderName + "_vert";
@@ -717,7 +717,7 @@ bool Renderer::LoadDeviceSync()
     descriptor.defaultQueue.nextInChain = nullptr;
     descriptor.defaultQueue.label = "Default Queue";
     descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason, const char* message, void* /* userData */) {
-        Log::Error("Device lost: reason " + std::to_string(reason));
+        Log::Error("Device lost: reason %", reason);
         if (message)
         {
             Log::Error(message);
@@ -749,7 +749,7 @@ bool Renderer::LoadDeviceSync()
     }
 
     uncapturedErrorHandle = m_Device.setUncapturedErrorCallback([](wgpu::ErrorType type, const char* message) {
-        Log::Error("Uncaptured device error: type " + std::to_string(type));
+        Log::Error("Uncaptured device error: type %", (int)type);
         if (message)
         {
             Log::Error(message);

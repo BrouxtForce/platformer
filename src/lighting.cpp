@@ -544,7 +544,7 @@ void Lighting::Resize(int width, int height)
     m_Width = width;
     m_Height = height;
 
-    Log::Debug("Resized lighting textures: " + std::to_string(m_Width) + ", " + std::to_string(m_Height));
+    Log::Debug("Resized lighting textures: %, %", m_Width, m_Height);
 
     DestroyTextures();
     DestroyBindGroups();

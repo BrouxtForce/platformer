@@ -66,7 +66,7 @@ namespace
 
             default: break;
         }
-        Log::Error("Unknown data type: " + std::to_string((int)dataType));
+        Log::Error("Unknown data type: %", (int)dataType);
         return "unknown";
     }
 }
@@ -334,14 +334,14 @@ void Shader::WriteUniform(Material& material, const std::string& name, T value) 
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Unknown uniform '" + name + "'");
+        Log::Error("Unknown uniform '%'", name);
         return;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected " + DataTypeToString(uniformData.dataType) + ", but got " + DataTypeToString(inputDataType));
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
         return;
     }
 
@@ -370,14 +370,14 @@ std::optional<T> Shader::GetUniform(const Material& material, const std::string&
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Could not find uniform '" + name + "'");
+        Log::Error("Could not find uniform '%'", name);
         return std::nullopt;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected " + DataTypeToString(uniformData.dataType) + ", but got " + DataTypeToString(inputDataType));
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
         return std::nullopt;
     }
 
@@ -413,7 +413,7 @@ void ShaderLibrary::Load(wgpu::Device device)
         }
         std::string moduleName = filename.substr(0, filename.size() - extension.size());
         m_ShaderModuleMap.insert({ moduleName, LoadShader(device, (std::string)dirname + filename) });
-        Log::Debug("Loaded shader module '" + moduleName + "'");
+        Log::Debug("Loaded shader module '%'", moduleName);
     }
 }
 
