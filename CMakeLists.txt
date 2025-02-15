@@ -29,6 +29,7 @@ add_executable(game
     src/log.cpp
     src/main.cpp
     src/math.cpp
+    src/memory-arena.cpp
     src/menu.cpp
     src/physics.cpp
     src/player.cpp
@@ -109,3 +110,24 @@ target_copy_webgpu_binaries(game)
 
 add_subdirectory(sdl3webgpu)
 target_link_libraries(game PRIVATE sdl3webgpu)
+
+option(BUILD_TESTS "Build tests" OFF)
+if (BUILD_TESTS)
+    add_executable(test
+        src/log.cpp
+        src/memory-arena.cpp
+
+        tests/array.test.cpp
+        tests/memory-arena.test.cpp
+        tests/test.cpp
+    )
+    target_include_directories(test PUBLIC
+        src
+        include/doctest
+    )
+    set_target_properties(test PROPERTIES
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+    )
+endif()

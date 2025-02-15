@@ -1,0 +1,142 @@
+#include "memory-arena.hpp"
+
+#include <memory>
+#include <algorithm>
+#include <cassert>
+
+#include "log.hpp"
+
+size_t Align(size_t bytes, size_t alignment)
+{
+    assert(std::has_single_bit(alignment));
+    return bytes + (alignment - bytes % alignment) % alignment;
+}
+
+void MemoryArena::Init(size_t bytes, size_t flags)
+{
+    // We store memory for the next MemoryArena at the end of the allocated block
+    // We pretend this memory doesn't exist so we don't return allocations that intrude this space
+    size_t requestedSize = Align(bytes, alignof(MemoryArena));
+    size_t actualSize = requestedSize + sizeof(MemoryArena);
+
+    if (flags & MemoryArenaFlags_ClearToZero)
+    {
+        data = calloc(actualSize, 1);
+    }
+    else
+    {
+        data = malloc(actualSize);
+    }
+    size = requestedSize;
+    offset = 0;
+    this->flags = flags;
+
+    if (data == nullptr)
+    {
+        std::abort();
+    }
+}
+
+void MemoryArena::Clear()
+{
+    if (flags & MemoryArenaFlags_ClearToZero)
+    {
+        memset(data, 0, offset);
+    }
+    offset = 0;
+    if (next != nullptr)
+    {
+        next->Clear();
+    }
+}
+
+void MemoryArena::Free()
+{
+    free(data);
+
+    data = nullptr;
+    size = 0;
+    offset = 0;
+
+    if (next != nullptr)
+    {
+        next->Free();
+    }
+}
+
+void* MemoryArena::Alloc(size_t bytes, size_t alignment)
+{
+    assert(data != nullptr && bytes > 0);
+
+    void* result = nullptr;
+
+    size_t newOffset = Align(offset, alignment);
+    if (newOffset + bytes > size)
+    {
+        if (next == nullptr)
+        {
+            // TODO: Is this arena's current size a good minimum size?
+            MemoryArena* footer = GetFooter();
+            footer->Init(std::max(size, bytes), flags);
+
+            next = footer;
+        }
+        result = next->Alloc(bytes, alignment);
+    }
+    else
+    {
+        result = (char*)data + newOffset;
+        offset = newOffset + bytes;
+    }
+
+    assert(result != nullptr);
+
+    return result;
+}
+
+void* MemoryArena::Realloc(void* prevData, size_t prevSize, size_t newSize, size_t alignment)
+{
+    assert(data != nullptr && prevData != nullptr);
+
+    if (prevSize == newSize)
+    {
+        Log::Warn("Redundant realloc! (% bytes)", newSize);
+        return prevData;
+    }
+
+    // If it's not in this block, try the next one
+    if (prevData < data || prevData >= (char*)data + size)
+    {
+        assert(next != nullptr);
+        return next->Realloc(prevData, prevSize, newSize, alignment);
+    }
+
+    // If it was the immediately previous allocation, dealloc
+    if ((char*)prevData + prevSize == (char*)data + offset)
+    {
+        offset -= prevSize;
+    }
+
+    void* newData = Alloc(newSize, alignment);
+    if (newData == prevData)
+    {
+        if (newSize < prevSize && (flags & MemoryArenaFlags_ClearToZero))
+        {
+            memset((char*)newData + newSize, 0, prevSize - newSize);
+        }
+        return newData;
+    }
+
+    memcpy(newData, prevData, std::min(prevSize, newSize));
+    if (flags & MemoryArenaFlags_ClearToZero)
+    {
+        memset(prevData, 0, prevSize);
+    }
+
+    return newData;
+}
+
+MemoryArena* MemoryArena::GetFooter()
+{
+    return (MemoryArena*)((char*)data + size);
+}
