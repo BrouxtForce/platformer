@@ -22,6 +22,7 @@ add_executable(game
     src/application.cpp
     src/buffer.cpp
     src/camera.cpp
+    src/data-structures.cpp
     src/font-atlas.cpp
     src/input.cpp
     src/jump-flood.cpp
@@ -114,11 +115,13 @@ target_link_libraries(game PRIVATE sdl3webgpu)
 option(BUILD_TESTS "Build tests" OFF)
 if (BUILD_TESTS)
     add_executable(test
+        src/data-structures.cpp
         src/log.cpp
         src/memory-arena.cpp
 
         tests/array.test.cpp
         tests/memory-arena.test.cpp
+        tests/string.test.cpp
         tests/test.cpp
     )
     target_include_directories(test PUBLIC

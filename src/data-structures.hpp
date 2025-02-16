@@ -20,6 +20,7 @@ struct Array
 
     inline void Reserve(size_t newCapacity)
     {
+        assert(arena != nullptr);
         if (newCapacity <= capacity)
         {
             return;
@@ -73,4 +74,38 @@ struct Array
         assert(index >= 0 && index < size);
         return data[index];
     }
+};
+
+struct StringView;
+
+struct String : Array<char>
+{
+    void Append(StringView str);
+    void Append(char c);
+
+    bool Equals(StringView str) const;
+
+    String operator+(StringView other) const;
+    String operator+(char c) const;
+
+    void operator+=(StringView other);
+    void operator+=(char c);
+
+    bool operator==(StringView str) const;
+    bool operator!=(StringView str) const;
+};
+
+struct StringView
+{
+    const char* data = nullptr;
+    size_t size = 0;
+
+    StringView() = default;
+    StringView(const String& str);
+    StringView(const char* str);
+
+    bool Equals(StringView str) const;
+
+    bool operator==(StringView str) const;
+    bool operator!=(StringView str) const;
 };
