@@ -12,6 +12,26 @@
 MemoryArena GlobalArena;
 MemoryArena TransientArena;
 
+#if DEBUG
+void ImGuiMemoryDiagnosticsWindow()
+{
+    ImGui::Begin("Memory diagnostics");
+    ImGui::Text("Arena memory: %zu", MemoryArena::TotalAllocationSize);
+    ImGui::Text("Num arenas: %zu", MemoryArena::NumActiveArenas);
+
+    MemoryArena::MemoryInfo globalArenaInfo = GlobalArena.GetMemoryInfo();
+    ImGui::Text("Global arena: %zu/%zu", globalArenaInfo.usedMemory, globalArenaInfo.allocatedMemory);
+
+    MemoryArena::MemoryInfo transientArenaInfo = TransientArena.GetMemoryInfo();
+    ImGui::Text("Transient arena: %zu/%zu", transientArenaInfo.usedMemory, transientArenaInfo.allocatedMemory);
+
+    MemoryArena::MemoryInfo logArenaInfo = Log::GetArena()->GetMemoryInfo();
+    ImGui::Text("Log arena: %zu/%zu", logArenaInfo.usedMemory, logArenaInfo.allocatedMemory);
+
+    ImGui::End();
+}
+#endif
+
 bool Application::Init(GameState startGameState)
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -199,6 +219,8 @@ bool Application::LoopEditor(float deltaTime)
     }
 
 #if DEBUG
+    ImGuiMemoryDiagnosticsWindow();
+
     ImGui::Begin("Inspector");
     if (inspectedEntity != nullptr)
     {
@@ -400,7 +422,7 @@ bool Application::LoopMainMenu(float deltaTime)
     m_Scene.EndFrame();
 
 #if DEBUG
-    ImGui::Text("Mouse position: (%f, %f)", mousePosition.x, mousePosition.y);
+    ImGuiMemoryDiagnosticsWindow();
 #endif
 
     m_Renderer.Resize();
@@ -457,6 +479,8 @@ bool Application::LoopGame(float deltaTime)
     m_Scene.EndFrame();
 
 #if DEBUG
+    ImGuiMemoryDiagnosticsWindow();
+
     ImGui::Text("CPU: %fms", frameTime);
     ImGui::Text("Delta time: %fms", deltaTime * 1000.0f);
     ImGui::Text("Camera position: (%f, %f)", m_Camera.transform.position.x, m_Camera.transform.position.y);

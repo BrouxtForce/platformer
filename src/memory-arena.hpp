@@ -54,4 +54,24 @@ struct MemoryArena
     }
 
     MemoryArena* GetFooter();
+
+    // We expose information about the arenas in debug mode to make sure things don't get out of hand
+    #if DEBUG
+        // The total number of arenas that have been initialized and not freed. This includes the new arenas
+        // that are automatically allocated when an arena does not have enough space for the next allocation
+        static size_t NumActiveArenas;
+
+        // The total amount of memory that all memory arenas are currently taking up. This includes the footer
+        // that is placed at the end of the block memory in each MemoryArena to store the next arena on resize
+        static size_t TotalAllocationSize;
+
+        size_t GetActualSize() const;
+
+        struct MemoryInfo
+        {
+            size_t usedMemory = 0;
+            size_t allocatedMemory = 0;
+        };
+        MemoryInfo GetMemoryInfo() const;
+    #endif
 };

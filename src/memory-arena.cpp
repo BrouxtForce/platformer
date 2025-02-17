@@ -42,6 +42,11 @@ void MemoryArena::Init(size_t bytes, size_t flags)
         std::abort();
     }
 
+#if DEBUG
+    NumActiveArenas++;
+    TotalAllocationSize += actualSize;
+#endif
+
     if ((flags & MemoryArenaFlags_NoLog) == 0)
     {
         Log::Debug("Memory Arena Allocation (% bytes)", actualSize);
@@ -70,9 +75,15 @@ void MemoryArena::Free()
 
     free(data);
 
+#if DEBUG
+    NumActiveArenas--;
+    TotalAllocationSize -= size + sizeof(MemoryArena);
+#endif
+
     data = nullptr;
     size = 0;
     offset = 0;
+
 }
 
 void* MemoryArena::Alloc(size_t bytes, size_t alignment)
@@ -154,3 +165,26 @@ MemoryArena* MemoryArena::GetFooter()
 {
     return (MemoryArena*)((char*)data + size);
 }
+
+#if DEBUG
+    size_t MemoryArena::NumActiveArenas = 0;
+    size_t MemoryArena::TotalAllocationSize = 0;
+
+    MemoryArena::MemoryInfo MemoryArena::GetMemoryInfo() const
+    {
+        // We don't include the footer in the memory info
+        // TODO: Should we?
+        size_t usedMemory = offset;
+        size_t allocatedMemory = size;
+        if (next != nullptr)
+        {
+            MemoryInfo info = next->GetMemoryInfo();
+            allocatedMemory += info.allocatedMemory;
+            usedMemory += info.usedMemory;
+        }
+        return {
+            .usedMemory = usedMemory,
+            .allocatedMemory = allocatedMemory
+        };
+    }
+#endif
