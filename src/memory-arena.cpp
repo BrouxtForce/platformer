@@ -14,10 +14,16 @@ size_t Align(size_t bytes, size_t alignment)
 
 void MemoryArena::Init(size_t bytes, size_t flags)
 {
+    assert(data == nullptr && "Free() must be called before calling Init() again");
+
     // We store memory for the next MemoryArena at the end of the allocated block
     // We pretend this memory doesn't exist so we don't return allocations that intrude this space
     size_t requestedSize = Align(bytes, alignof(MemoryArena));
     size_t actualSize = requestedSize + sizeof(MemoryArena);
+
+    size = requestedSize;
+    offset = 0;
+    this->flags = flags;
 
     if (flags & MemoryArenaFlags_ClearToZero)
     {
@@ -26,14 +32,19 @@ void MemoryArena::Init(size_t bytes, size_t flags)
     else
     {
         data = malloc(actualSize);
+
+        // The memory for the next arena should still be zeroed
+        memset(GetFooter(), 0, sizeof(MemoryArena));
     }
-    size = requestedSize;
-    offset = 0;
-    this->flags = flags;
 
     if (data == nullptr)
     {
         std::abort();
+    }
+
+    if ((flags & MemoryArenaFlags_NoLog) == 0)
+    {
+        Log::Debug("Memory Arena Allocation (% bytes)", actualSize);
     }
 }
 
@@ -52,16 +63,16 @@ void MemoryArena::Clear()
 
 void MemoryArena::Free()
 {
+    if (next != nullptr)
+    {
+        next->Free();
+    }
+
     free(data);
 
     data = nullptr;
     size = 0;
     offset = 0;
-
-    if (next != nullptr)
-    {
-        next->Free();
-    }
 }
 
 void* MemoryArena::Alloc(size_t bytes, size_t alignment)
@@ -100,7 +111,10 @@ void* MemoryArena::Realloc(void* prevData, size_t prevSize, size_t newSize, size
 
     if (prevSize == newSize)
     {
-        Log::Warn("Redundant realloc! (% bytes)", newSize);
+        if ((flags & MemoryArenaFlags_NoLog) == 0)
+        {
+            Log::Warn("Redundant realloc! (% bytes)", newSize);
+        }
         return prevData;
     }
 

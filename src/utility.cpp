@@ -22,7 +22,7 @@ std::string ReadFile(const std::string& filepath)
     {
         return {};
     }
-    Log::Debug("Read '%' (% bytes)", filepath, dataSize);
+    Log::Debug("Read '%' (% bytes)", filepath.c_str(), dataSize);
 
     std::string out = data;
     SDL_free(data);
@@ -40,9 +40,9 @@ std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
     {
         return dataVector;
     }
-    Log::Debug("Read '%' (% bytes)", filepath, dataSize);
+    Log::Debug("Read '%' (% bytes)", filepath.c_str(), dataSize);
 
-    dataVector.reserve(dataSize);
+    dataVector.resize(dataSize);
     SDL_memcpy(dataVector.data(), data, dataSize);
 
     SDL_free(data);
@@ -57,7 +57,7 @@ void WriteFile(const std::string& filepath, const std::string& data)
     SDL_IOStream* context = SDL_IOFromFile(fullPath.c_str(), "w+");
     if (context == nullptr)
     {
-        Log::Error("Failed to write file '%' (Failed to create handle)", filepath);
+        Log::Error("Failed to write file '%' (Failed to create handle)", filepath.c_str());
         Log::Error(SDL_GetError());
     }
     else
@@ -65,12 +65,12 @@ void WriteFile(const std::string& filepath, const std::string& data)
         size_t bytesWritten = SDL_WriteIO(context, data.data(), data.size());
         if (bytesWritten != data.size())
         {
-            Log::Error("Failed to write file '%' (% bytes written)", filepath, bytesWritten);
+            Log::Error("Failed to write file '%' (% bytes written)", filepath.c_str(), bytesWritten);
             Log::Error(SDL_GetError());
         }
         else
         {
-            Log::Debug("Wrote '%' (% bytes)", filepath, bytesWritten);
+            Log::Debug("Wrote '%' (% bytes)", filepath.c_str(), bytesWritten);
         }
     }
     SDL_CloseIO(context);

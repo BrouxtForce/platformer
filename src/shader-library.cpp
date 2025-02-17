@@ -334,14 +334,14 @@ void Shader::WriteUniform(Material& material, const std::string& name, T value) 
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Unknown uniform '%'", name);
+        Log::Error("Unknown uniform '%'", name.c_str());
         return;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType).c_str(), DataTypeToString(inputDataType).c_str());
         return;
     }
 
@@ -370,14 +370,14 @@ std::optional<T> Shader::GetUniform(const Material& material, const std::string&
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Could not find uniform '%'", name);
+        Log::Error("Could not find uniform '%'", name.c_str());
         return std::nullopt;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType).c_str(), DataTypeToString(inputDataType).c_str());
         return std::nullopt;
     }
 
@@ -413,7 +413,7 @@ void ShaderLibrary::Load(wgpu::Device device)
         }
         std::string moduleName = filename.substr(0, filename.size() - extension.size());
         m_ShaderModuleMap.insert({ moduleName, LoadShader(device, (std::string)dirname + filename) });
-        Log::Debug("Loaded shader module '%'", moduleName);
+        Log::Debug("Loaded shader module '%'", moduleName.c_str());
     }
 }
 

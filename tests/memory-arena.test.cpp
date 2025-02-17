@@ -171,5 +171,27 @@ TEST_CASE("Memory Arena")
         CHECK(arena.next == nullptr);
     }
 
+    SUBCASE("Footer should be cleared regardless of flags")
+    {
+        MemoryArena* footer = arena.GetFooter();
+        CHECK(footer->data == nullptr);
+        CHECK(footer->size == 0);
+        CHECK(footer->offset == 0);
+        CHECK(footer->flags == 0);
+        footer->data = (void*)~(size_t)0;
+        footer->size = ~(size_t)0;
+        footer->offset = ~(size_t)0;
+        footer->flags = ~(size_t)0;
+
+        arena.Free();
+
+        arena.Init(64, 0);
+        footer = arena.GetFooter();
+        CHECK(footer->data == nullptr);
+        CHECK(footer->size == 0);
+        CHECK(footer->offset == 0);
+        CHECK(footer->flags == 0);
+    }
+
     arena.Free();
 }

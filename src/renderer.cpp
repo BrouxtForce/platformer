@@ -588,7 +588,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     const Shader* shader = m_ShaderLibrary.GetShader(shaderName);
     if (!shader)
     {
-        Log::Error("Shader '%' does not exist.", shaderName);
+        Log::Error("Shader '%' does not exist.", shaderName.c_str());
         return std::nullopt;
     }
     std::string vertexEntry = shaderName + "_vert";

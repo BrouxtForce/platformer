@@ -7,7 +7,10 @@ enum MemoryArenaFlags : size_t
 {
     // Guarantees the memory returned by Alloc() is zeroed
     // This flag should only be set on initialization
-    MemoryArenaFlags_ClearToZero = 1 << 0
+    MemoryArenaFlags_ClearToZero = 1 << 0,
+
+    // Prevents MemoryArena from calling any logging functions
+    MemoryArenaFlags_NoLog = 1 << 1
 };
 
 // TODO: The current implementation uses malloc() and free(), but maybe we can take advantage

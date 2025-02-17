@@ -9,6 +9,9 @@
 #include "log.hpp"
 #include "utility.hpp"
 
+MemoryArena GlobalArena;
+MemoryArena TransientArena;
+
 bool Application::Init(GameState startGameState)
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -22,6 +25,10 @@ bool Application::Init(GameState startGameState)
         Log::Error("Failed to create window");
         return false;
     }
+
+    GlobalArena.Init(1'048'576, MemoryArenaFlags_ClearToZero);
+    TransientArena.Init(1'048'576, MemoryArenaFlags_ClearToZero);
+
     if (!m_Renderer.Init(m_Window))
     {
         Log::Error("Failed to initialize renderer");

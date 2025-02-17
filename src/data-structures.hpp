@@ -76,20 +76,59 @@ struct Array
     }
 };
 
+inline constexpr size_t GetCStringLength(const char* str)
+{
+    if (std::is_constant_evaluated())
+    {
+        if (*str == '\0')
+        {
+            return 0;
+        }
+        return GetCStringLength(str + 1) + 1;
+    }
+    return strlen(str);
+}
+
 struct StringView;
 
 struct String : Array<char>
 {
+    static constexpr size_t NPOS = -1;
+
     void Append(StringView str);
     void Append(char c);
+
+    void Append(unsigned short num);
+    void Append(unsigned int num);
+    void Append(unsigned long num);
+    void Append(unsigned long long num);
+
+    void Append(short num);
+    void Append(int num);
+    void Append(long num);
+    void Append(long long num);
+
+    void Append(double num);
+
+    void Clear();
 
     bool Equals(StringView str) const;
 
     String operator+(StringView other) const;
     String operator+(char c) const;
 
-    void operator+=(StringView other);
-    void operator+=(char c);
+    template<typename T>
+    inline void operator+=(const T& other)
+    {
+        Append(other);
+    }
+
+    template<typename T>
+    inline String& operator<<(const T& other)
+    {
+        Append(other);
+        return *this;
+    }
 
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;
@@ -102,10 +141,27 @@ struct StringView
 
     StringView() = default;
     StringView(const String& str);
-    StringView(const char* str);
+
+    inline constexpr StringView(const char* str)
+    {
+        data = str;
+        size = GetCStringLength(str);
+        if (std::is_constant_evaluated())
+        {
+            GetCStringLength(str);
+        }
+        else
+        {
+            size = strlen(str);
+        }
+    }
+
+    StringView Substr(size_t position, size_t length = String::NPOS) const;
 
     bool Equals(StringView str) const;
 
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;
+
+    const char& operator[](size_t index) const;
 };

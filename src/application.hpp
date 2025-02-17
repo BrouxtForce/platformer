@@ -9,6 +9,13 @@
 #include "player.hpp"
 #include "menu.hpp"
 #include "input.hpp"
+#include "memory-arena.hpp"
+
+// Memory allocated with this arena will persist for the entire duration of the program
+extern MemoryArena GlobalArena;
+
+// Memory allocated in this arena will be cleared at the beginning of every frame
+extern MemoryArena TransientArena;
 
 enum class GameState
 {

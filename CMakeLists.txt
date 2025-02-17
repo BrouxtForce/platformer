@@ -126,6 +126,7 @@ if (BUILD_TESTS)
     )
     target_include_directories(test PUBLIC
         src
+        include
         include/doctest
     )
     set_target_properties(test PROPERTIES
@@ -133,4 +134,14 @@ if (BUILD_TESTS)
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
     )
+endif()
+
+option(SANITIZE "Use a sanitizer" "NONE")
+if (SANITIZE STREQUAL "ADDRESS")
+    message("Using address sanitizer")
+    target_compile_options(game PRIVATE -fsanitize=address)
+    target_link_options(game PRIVATE -fsanitize=address)
+
+    target_compile_options(test PRIVATE -fsanitize=address)
+    target_link_options(test PRIVATE -fsanitize=address)
 endif()
