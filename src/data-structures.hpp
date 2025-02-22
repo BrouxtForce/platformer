@@ -4,13 +4,15 @@
 #include <type_traits>
 #include <cassert>
 #include <cstring>
+#include <bit>
 
 #include "memory-arena.hpp"
+#include "math.hpp"
 
 template<typename T>
 struct Array
 {
-    static_assert(std::is_trivially_constructible<T>() && std::is_trivially_destructible<T>());
+    static_assert(std::is_trivial_v<T>);
 
     MemoryArena* arena = nullptr;
 
@@ -74,6 +76,132 @@ struct Array
         assert(index >= 0 && index < size);
         return data[index];
     }
+};
+
+/*
+    A dynamic array with the following properties:
+    - Pointers returned by Push() are stable
+    - Calling Erase(ptr) frees up the slot used by ptr
+    - The order of the array is not necessarily the order of insertion
+    - Push() can insert new elements before the last element
+    - All elements can be iteratod through with a range-based for loop
+*/
+
+template<typename T>
+struct StableArray
+{
+    static_assert(std::is_trivial_v<T>);
+
+    MemoryArena* arena = nullptr;
+
+    T* data = nullptr;
+    StableArray* next = nullptr;
+    uint64_t allocatedMask = 0;
+    constexpr static size_t BlockSize = 64;
+
+    inline void Init()
+    {
+        size_t dataSize = Align(64 * sizeof(T), alignof(decltype(*this)));
+        assert(arena->flags & MemoryArenaFlags_ClearToZero);
+        data = (T*)arena->Alloc(
+            dataSize + sizeof(*this),
+            Math::Max(alignof(T), alignof(decltype(*this)))
+        );
+        next = (StableArray<T>*)((char*)data + dataSize);
+        next->arena = arena;
+    }
+
+    inline T* Push(T value)
+    {
+        if (data == nullptr)
+        {
+            Init();
+        }
+        int nextFree = std::countr_one(allocatedMask);
+
+        T* result = nullptr;
+        if (nextFree == 64)
+        {
+            result = next->Push(value);
+        }
+        else
+        {
+            allocatedMask |= ((uint64_t)1 << nextFree);
+            result = data + nextFree;
+        }
+        *result = value;
+        return result;
+    }
+
+    inline void Erase(T* ptr)
+    {
+        if (ptr >= data && ptr < data + 64)
+        {
+            int index = ptr - data;
+            *ptr = 0;
+            allocatedMask &= ~((uint64_t)1 << index);
+        }
+        else
+        {
+            assert(next != nullptr);
+            next->Erase(ptr);
+        }
+    }
+
+    struct Iterator
+    {
+        StableArray<T>* currentArray = nullptr;
+        uint64_t currentMask = 0;
+
+        T& operator*() const
+        {
+            assert(currentArray != nullptr && currentMask != 0);
+            int next = std::countr_zero(currentMask);
+            return currentArray->data[next];
+        }
+        T& operator++()
+        {
+            assert(currentArray != nullptr && currentMask != 0);
+            int next = std::countr_zero(currentMask);
+            currentMask &= ~((uint64_t)1 << next);
+            T* result = &currentArray->data[next];
+            NextNonEmpty();
+            return *result;
+        }
+        bool operator==(Iterator other)
+        {
+            return currentArray == other.currentArray && currentMask == other.currentMask;
+        };
+        void NextNonEmpty()
+        {
+            while (currentMask == 0)
+            {
+                currentArray = currentArray->next;
+                if (currentArray == nullptr)
+                {
+                    currentMask = 0;
+                    break;
+                }
+                currentMask = currentArray->allocatedMask;
+                if (currentArray->data == nullptr)
+                {
+                    currentArray = nullptr;
+                    currentMask = 0;
+                    break;
+                }
+            }
+        }
+    };
+    Iterator begin()
+    {
+        Iterator iterator { .currentArray = this, .currentMask = allocatedMask };
+        iterator.NextNonEmpty();
+        return iterator;
+    };
+    Iterator end()
+    {
+        return {};
+    };
 };
 
 inline constexpr size_t GetCStringLength(const char* str)

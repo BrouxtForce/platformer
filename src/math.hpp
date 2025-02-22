@@ -136,6 +136,22 @@ namespace Math
 
     float2 Floor(float2 value);
 
+    template<typename T0, typename T1>
+    requires (std::is_same_v<T0, T1>)
+    inline T0 Max(T0 a, T1 b)
+    {
+        if (a > b) return a;
+        return b;
+    }
+
+    template<typename T0, typename T1>
+    requires (std::is_same_v<T0, T1>)
+    inline T0 Min(T0 a, T1 b)
+    {
+        if (a < b) return a;
+        return b;
+    }
+
     constexpr double PI = M_PI;
     constexpr double RAD_TO_DEG = 180.0 / PI;
     constexpr double DEG_TO_RAD = PI / 180.0;

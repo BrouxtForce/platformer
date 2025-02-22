@@ -121,6 +121,7 @@ if (BUILD_TESTS)
 
         tests/array.test.cpp
         tests/memory-arena.test.cpp
+        tests/stable-array.test.cpp
         tests/string.test.cpp
         tests/test.cpp
     )

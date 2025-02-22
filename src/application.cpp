@@ -72,20 +72,25 @@ bool Application::Loop(float deltaTime)
     }
     timeAccumulation -= TARGET_DELTA_TIME;
 
+    bool success = false;
     if (m_GameState == GameState::Editor)
     {
-        return LoopEditor(TARGET_DELTA_TIME);
+        success = LoopEditor(TARGET_DELTA_TIME);
     }
-    if ((int)m_GameState & (int)GameState::MainMenu)
+    else if ((int)m_GameState & (int)GameState::MainMenu)
     {
-        return LoopMainMenu(TARGET_DELTA_TIME);
+        success = LoopMainMenu(TARGET_DELTA_TIME);
     }
-    if (m_GameState == GameState::Game || m_GameState == GameState::FinishingLevel)
+    else if (m_GameState == GameState::Game || m_GameState == GameState::FinishingLevel)
     {
-        return LoopGame(TARGET_DELTA_TIME);
+        success = LoopGame(TARGET_DELTA_TIME);
     }
-    Log::Error("Invalid game state: %", (int)m_GameState);
-    return false;
+    else
+    {
+        Log::Error("Invalid game state: %", (int)m_GameState);
+    }
+    TransientArena.Clear();
+    return success;
 }
 
 void Application::LoadScene(const std::string& sceneFilepath)

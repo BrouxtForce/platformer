@@ -3,6 +3,7 @@
 #include <memory>
 #include <algorithm>
 #include <cassert>
+#include <bit>
 
 #include "log.hpp"
 
