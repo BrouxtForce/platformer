@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "transform.hpp"
+#include "data-structures.hpp"
 
 class Shader;
 struct Material
@@ -46,7 +47,7 @@ struct GravityZone
 
 struct Entity
 {
-    std::string name;
+    StringView name;
     uint16_t id = 1;
     uint16_t flags = 0;
     uint16_t zIndex = 0;
@@ -60,7 +61,7 @@ struct Entity
 class Scene
 {
 public:
-    std::vector<std::unique_ptr<Entity>> entities;
+    StableArray<Entity> entities;
 
     struct Properties
     {
@@ -76,7 +77,7 @@ public:
 
     Properties properties;
 
-    Scene() = default;
+    void Init(MemoryArena* arena);
 
     Entity* CreateEntity();
     void DestroyEntity(Entity* entity);
@@ -85,6 +86,9 @@ public:
 
     void Clear();
 
-    std::string Serialize() const;
-    void Deserialize(const std::string& data);
+    String Serialize(MemoryArena* arena) const;
+    void Deserialize(StringView data);
+
+private:
+    uint32_t nextId = 0;
 };

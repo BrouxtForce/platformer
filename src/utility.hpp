@@ -1,22 +1,22 @@
 #pragma once
 
-#include <string>
 #include <vector>
+#include "data-structures.hpp"
 
-std::string ReadFile(const std::string& filepath);
-std::vector<uint8_t> ReadFileBuffer(const std::string& filepath);
+String ReadFile(StringView filepath, MemoryArena* arena);
+std::vector<uint8_t> ReadFileBuffer(StringView filepath);
 
-void WriteFile(const std::string& filepath, const std::string& data);
+void WriteFile(StringView filepath, StringView data);
 
 // Returns the filenames in a directory
-std::vector<std::string> GetFilesInDirectory(const std::string& directory);
+Array<String> GetFilesInDirectory(StringView directory, MemoryArena* arena);
 
 struct CharacterInputStream
 {
-    std::string_view input;
+    StringView input;
     size_t position = 0;
 
-    CharacterInputStream(std::string_view input);
+    CharacterInputStream(StringView input);
 
     char Peek() const;
     char Next();

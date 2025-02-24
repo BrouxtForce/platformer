@@ -40,7 +40,7 @@ struct MemoryArena
     inline T* Alloc(size_t length = 1)
     {
         // Constructors/destructors will not be called! That would defeat the purpose of the arena allocator
-        static_assert(std::is_trivial_v<T>);
+        static_assert(std::is_trivially_destructible_v<T>);
         return (T*)Alloc(sizeof(T) * length, alignof(T));
     }
 
@@ -51,7 +51,7 @@ struct MemoryArena
     template<typename T>
     inline T* Realloc(T* prevData, size_t prevLength, size_t newLength)
     {
-        static_assert(std::is_trivial_v<T>);
+        static_assert(std::is_trivially_destructible_v<T>);
         return (T*)Realloc(prevData, sizeof(T) * prevLength, sizeof(T) * newLength, alignof(T));
     }
 

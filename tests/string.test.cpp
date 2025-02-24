@@ -161,4 +161,17 @@ TEST_CASE("String View")
         CHECK(view.size == 4);
         CHECK(view == "argh");
     }
+
+    SUBCASE("EndsWith")
+    {
+        CHECK(StringView("abcdef").EndsWith(""));
+        CHECK(StringView("abcdef").EndsWith("f"));
+        CHECK(StringView("abcdef").EndsWith("ef"));
+        CHECK(StringView("abcdef").EndsWith("def"));
+        CHECK(StringView("abcdef").EndsWith("cdef"));
+        CHECK(StringView("abcdef").EndsWith("abcdef"));
+        CHECK_FALSE(StringView("abcdef").EndsWith("zabcdef"));
+        CHECK_FALSE(StringView("abcdef").EndsWith("abcdefz"));
+        CHECK_FALSE(StringView("abcdef").EndsWith("e"));
+    }
 }

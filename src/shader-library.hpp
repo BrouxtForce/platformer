@@ -14,17 +14,17 @@ class Shader
 public:
     wgpu::ShaderModule shaderModule{};
 
-    Shader(wgpu::ShaderModule shaderModule, std::string_view source);
+    Shader(wgpu::ShaderModule shaderModule, StringView source);
     ~Shader();
 
     Shader(const Shader&) = delete;
     Shader& operator=(const Shader&) = delete;
 
     template<typename T>
-    void WriteUniform(Material& material, const std::string& name, T value) const;
+    void WriteUniform(Material& material, StringView name, T value) const;
 
     template<typename T>
-    std::optional<T> GetUniform(const Material& material, const std::string& name) const;
+    std::optional<T> GetUniform(const Material& material, StringView name) const;
 
     enum class DataType : uint8_t
     {
@@ -46,7 +46,7 @@ public:
 private:
     struct TokenInputStream;
 
-    void GenerateReflectionInfo(std::string_view source);
+    void GenerateReflectionInfo(StringView source);
     void ParseMaterialStruct(TokenInputStream& stream);
 
     struct UniformData
@@ -55,11 +55,11 @@ private:
         uint8_t offset{};
     };
 
-    std::unordered_map<std::string, UniformData> m_UniformMap;
+    std::unordered_map<StringView, UniformData> m_UniformMap;
 };
 
 template<typename T>
-void WriteUniform(Entity* entity, const std::string& name, T value)
+void WriteUniform(Entity* entity, StringView name, T value)
 {
     if (!entity->shader)
     {
@@ -71,10 +71,11 @@ void WriteUniform(Entity* entity, const std::string& name, T value)
 
 template<typename T>
 [[nodiscard]]
-std::optional<T> GetUniform(const Entity* entity, const std::string& name)
+std::optional<T> GetUniform(const Entity* entity, StringView name)
 {
     if (!entity->shader)
     {
+        __builtin_debugtrap();
         Log::Error("Shader is nullptr");
         return std::nullopt;
     }
@@ -91,15 +92,15 @@ public:
 
     void Load(wgpu::Device device);
 
-    const Shader* GetShader(const std::string& name) const;
+    const Shader* GetShader(StringView name) const;
 
 private:
-    static constexpr std::string_view m_HeaderFilename = "header.wgsl";
-    std::string m_Header;
+    static constexpr StringView m_HeaderFilename = "header.wgsl";
+    StringView m_Header;
 
-    std::unordered_map<std::string, std::unique_ptr<Shader>> m_ShaderModuleMap;
+    std::unordered_map<StringView, std::unique_ptr<Shader>> m_ShaderModuleMap;
 
-    std::unique_ptr<Shader> LoadShader(wgpu::Device, const std::string& filepath);
+    std::unique_ptr<Shader> LoadShader(wgpu::Device, StringView filepath);
 
-    std::string Preprocess(const std::string& source);
+    String Preprocess(StringView source, MemoryArena* arena);
 };

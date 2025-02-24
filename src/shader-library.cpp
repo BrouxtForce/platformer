@@ -3,6 +3,7 @@
 #include <variant>
 #include "utility.hpp"
 #include "log.hpp"
+#include "application.hpp"
 
 namespace
 {
@@ -44,7 +45,7 @@ namespace
         [(int)DataType::Float4] = 16
     };
 
-    std::string DataTypeToString(DataType dataType)
+    StringView DataTypeToString(DataType dataType)
     {
         switch (dataType)
         {
@@ -71,7 +72,7 @@ namespace
     }
 }
 
-using Token = std::variant<std::monostate, DataType, std::string_view, char>;
+using Token = std::variant<std::monostate, DataType, StringView, char>;
 
 // TODO: Support WGSL comments
 struct Shader::TokenInputStream
@@ -79,7 +80,7 @@ struct Shader::TokenInputStream
     CharacterInputStream input;
     Token peekToken;
 
-    TokenInputStream(std::string_view source)
+    TokenInputStream(StringView source)
         : input(source) {}
 
     Token PeekToken()
@@ -179,7 +180,7 @@ struct Shader::TokenInputStream
         }
         while (IsWord(input.Peek()));
 
-        std::string_view word = input.input.substr(startPosition, input.position - startPosition);
+        StringView word = input.input.Substr(startPosition, input.position - startPosition);
         if (word == "i32")   return DataType::Int32;
         if (word == "u32")   return DataType::Uint32;
         if (word == "f32")   return DataType::Float;
@@ -207,13 +208,13 @@ struct Shader::TokenInputStream
     }
 };
 
-Shader::Shader(wgpu::ShaderModule shaderModule, std::string_view source)
+Shader::Shader(wgpu::ShaderModule shaderModule, StringView source)
     : shaderModule(shaderModule)
 {
     GenerateReflectionInfo(source);
 }
 
-void Shader::GenerateReflectionInfo(std::string_view source)
+void Shader::GenerateReflectionInfo(StringView source)
 {
     TokenInputStream stream = source;
 
@@ -221,22 +222,22 @@ void Shader::GenerateReflectionInfo(std::string_view source)
     {
         Token token = stream.PeekToken();
 
-        if (std::holds_alternative<std::string_view>(token))
+        if (std::holds_alternative<StringView>(token))
         {
             stream.ReadToken();
-            if (std::get<std::string_view>(token) != "struct")
+            if (std::get<StringView>(token) != "struct")
             {
                 continue;
             }
 
             Token structNameToken = stream.ReadToken();
-            if (!std::holds_alternative<std::string_view>(structNameToken))
+            if (!std::holds_alternative<StringView>(structNameToken))
             {
                 continue;
             }
 
             // We only do reflection for Material structs
-            if (std::get<std::string_view>(structNameToken) == "Material")
+            if (std::get<StringView>(structNameToken) == "Material")
             {
                 ParseMaterialStruct(stream);
                 break;
@@ -269,10 +270,10 @@ void Shader::ParseMaterialStruct(TokenInputStream& stream)
     }
 
     uint8_t currentDataOffset = 0;
-    while (std::holds_alternative<std::string_view>(stream.PeekToken()))
+    while (std::holds_alternative<StringView>(stream.PeekToken()))
     {
         bool fail = false;
-        std::string_view memberName = GetTokenMember<std::string_view>(stream.ReadToken(), &fail);
+        StringView memberName = GetTokenMember<StringView>(stream.ReadToken(), &fail);
         fail = fail || GetTokenMember<char>(stream.ReadToken(), &fail) != ':';
         DataType dataType = GetTokenMember<DataType>(stream.ReadToken(), &fail);
         // TODO: Last comma is optional
@@ -290,7 +291,7 @@ void Shader::ParseMaterialStruct(TokenInputStream& stream)
         // TODO: Is there a more elegant way?
         currentDataOffset += (memberAlignment - currentDataOffset % memberAlignment) % memberAlignment;
         m_UniformMap.insert({
-            (std::string)memberName,
+            String::Copy(memberName, &GlobalArena),
             UniformData {
                 .offset = currentDataOffset,
                 .dataType = dataType
@@ -327,21 +328,21 @@ constexpr DataType GetDataType()
 }
 
 template<typename T>
-void Shader::WriteUniform(Material& material, const std::string& name, T value) const
+void Shader::WriteUniform(Material& material, StringView name, T value) const
 {
     constexpr DataType inputDataType = GetDataType<T>();
 
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Unknown uniform '%'", name.c_str());
+        Log::Error("Unknown uniform '%'", name);
         return;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType).c_str(), DataTypeToString(inputDataType).c_str());
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
         return;
     }
 
@@ -349,35 +350,35 @@ void Shader::WriteUniform(Material& material, const std::string& name, T value) 
     assert(uniformData.offset % 4 == 0);
     std::memcpy(&material.data[uniformData.offset / 4], &value, sizeof(T));
 }
-template void Shader::WriteUniform<int32_t>(Material&, const std::string&, int32_t) const;
-template void Shader::WriteUniform<uint32_t>(Material&, const std::string&, uint32_t) const;
-template void Shader::WriteUniform<float>(Material&, const std::string&, float) const;
-template void Shader::WriteUniform<Math::int2>(Material&, const std::string&, Math::int2) const;
-template void Shader::WriteUniform<Math::int3>(Material&, const std::string&, Math::int3) const;
-template void Shader::WriteUniform<Math::int4>(Material&, const std::string&, Math::int4) const;
-template void Shader::WriteUniform<Math::uint2>(Material&, const std::string&, Math::uint2) const;
-template void Shader::WriteUniform<Math::uint3>(Material&, const std::string&, Math::uint3) const;
-template void Shader::WriteUniform<Math::uint4>(Material&, const std::string&, Math::uint4) const;
-template void Shader::WriteUniform<Math::float2>(Material&, const std::string&, Math::float2) const;
-template void Shader::WriteUniform<Math::float3>(Material&, const std::string&, Math::float3) const;
-template void Shader::WriteUniform<Math::float4>(Material&, const std::string&, Math::float4) const;
+template void Shader::WriteUniform<int32_t>(Material&, StringView, int32_t) const;
+template void Shader::WriteUniform<uint32_t>(Material&, StringView, uint32_t) const;
+template void Shader::WriteUniform<float>(Material&, StringView, float) const;
+template void Shader::WriteUniform<Math::int2>(Material&, StringView, Math::int2) const;
+template void Shader::WriteUniform<Math::int3>(Material&, StringView, Math::int3) const;
+template void Shader::WriteUniform<Math::int4>(Material&, StringView, Math::int4) const;
+template void Shader::WriteUniform<Math::uint2>(Material&, StringView, Math::uint2) const;
+template void Shader::WriteUniform<Math::uint3>(Material&, StringView, Math::uint3) const;
+template void Shader::WriteUniform<Math::uint4>(Material&, StringView, Math::uint4) const;
+template void Shader::WriteUniform<Math::float2>(Material&, StringView, Math::float2) const;
+template void Shader::WriteUniform<Math::float3>(Material&, StringView, Math::float3) const;
+template void Shader::WriteUniform<Math::float4>(Material&, StringView, Math::float4) const;
 
 template<typename T>
-std::optional<T> Shader::GetUniform(const Material& material, const std::string& name) const
+std::optional<T> Shader::GetUniform(const Material& material, StringView name) const
 {
     constexpr DataType inputDataType = GetDataType<T>();
 
     auto it = m_UniformMap.find(name);
     if (it == m_UniformMap.end())
     {
-        Log::Error("Could not find uniform '%'", name.c_str());
+        Log::Error("Could not find uniform '%'", name);
         return std::nullopt;
     }
     const UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
-        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType).c_str(), DataTypeToString(inputDataType).c_str());
+        Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
         return std::nullopt;
     }
 
@@ -386,58 +387,74 @@ std::optional<T> Shader::GetUniform(const Material& material, const std::string&
     static_assert(s_DataTypeSize[(int)inputDataType] == sizeof(T));
     return *(T*)&material.data[uniformData.offset / 4];
 }
-template std::optional<int32_t> Shader::GetUniform<int32_t>(const Material&, const std::string&) const;
-template std::optional<uint32_t> Shader::GetUniform<uint32_t>(const Material&, const std::string&) const;
-template std::optional<float> Shader::GetUniform<float>(const Material&, const std::string&) const;
-template std::optional<Math::int2> Shader::GetUniform<Math::int2>(const Material&, const std::string&) const;
-template std::optional<Math::int3> Shader::GetUniform<Math::int3>(const Material&, const std::string&) const;
-template std::optional<Math::int4> Shader::GetUniform<Math::int4>(const Material&, const std::string&) const;
-template std::optional<Math::uint2> Shader::GetUniform<Math::uint2>(const Material&, const std::string&) const;
-template std::optional<Math::uint3> Shader::GetUniform<Math::uint3>(const Material&, const std::string&) const;
-template std::optional<Math::uint4> Shader::GetUniform<Math::uint4>(const Material&, const std::string&) const;
-template std::optional<Math::float2> Shader::GetUniform<Math::float2>(const Material&, const std::string&) const;
-template std::optional<Math::float3> Shader::GetUniform<Math::float3>(const Material&, const std::string&) const;
-template std::optional<Math::float4> Shader::GetUniform<Math::float4>(const Material&, const std::string&) const;
+template std::optional<int32_t> Shader::GetUniform<int32_t>(const Material&, StringView) const;
+template std::optional<uint32_t> Shader::GetUniform<uint32_t>(const Material&, StringView) const;
+template std::optional<float> Shader::GetUniform<float>(const Material&, StringView) const;
+template std::optional<Math::int2> Shader::GetUniform<Math::int2>(const Material&, StringView) const;
+template std::optional<Math::int3> Shader::GetUniform<Math::int3>(const Material&, StringView) const;
+template std::optional<Math::int4> Shader::GetUniform<Math::int4>(const Material&, StringView) const;
+template std::optional<Math::uint2> Shader::GetUniform<Math::uint2>(const Material&, StringView) const;
+template std::optional<Math::uint3> Shader::GetUniform<Math::uint3>(const Material&, StringView) const;
+template std::optional<Math::uint4> Shader::GetUniform<Math::uint4>(const Material&, StringView) const;
+template std::optional<Math::float2> Shader::GetUniform<Math::float2>(const Material&, StringView) const;
+template std::optional<Math::float3> Shader::GetUniform<Math::float3>(const Material&, StringView) const;
+template std::optional<Math::float4> Shader::GetUniform<Math::float4>(const Material&, StringView) const;
 
 void ShaderLibrary::Load(wgpu::Device device)
 {
-    constexpr std::string_view dirname = "shaders/";
-    m_Header = ReadFile((std::string)dirname + (std::string)m_HeaderFilename);
+    constexpr StringView dirname = "shaders/";
 
-    for (const std::string& filename : GetFilesInDirectory((std::string)dirname))
+    String headerPath;
+    headerPath.arena = &TransientArena;
+    headerPath << dirname << m_HeaderFilename << '\0';
+
+    m_Header = ReadFile(headerPath.data, &GlobalArena);
+
+    // TODO: Implement array iterators
+    Array<String> files = GetFilesInDirectory(dirname, &TransientArena);
+    for (size_t i = 0; i < files.size; i++)
     {
-        constexpr std::string_view extension = ".wgsl";
-        if (!filename.ends_with(extension) || filename == m_HeaderFilename)
+        StringView filename = files[i];
+
+        constexpr StringView extension = ".wgsl";
+        if (!filename.EndsWith(extension) || filename == m_HeaderFilename)
         {
             continue;
         }
-        std::string moduleName = filename.substr(0, filename.size() - extension.size());
-        m_ShaderModuleMap.insert({ moduleName, LoadShader(device, (std::string)dirname + filename) });
-        Log::Debug("Loaded shader module '%'", moduleName.c_str());
+        StringView moduleName = filename.Substr(0, filename.size - extension.size);
+
+        String filepath;
+        filepath.arena = &TransientArena;
+        filepath << dirname << filename;
+
+        m_ShaderModuleMap.insert({ String::Copy(moduleName, &GlobalArena), LoadShader(device, filepath) });
+        Log::Debug("Loaded shader module '%'", moduleName);
     }
 }
 
-const Shader* ShaderLibrary::GetShader(const std::string& name) const
+const Shader* ShaderLibrary::GetShader(StringView name) const
 {
     auto it = m_ShaderModuleMap.find(name);
     if (it == m_ShaderModuleMap.end())
     {
+        Log::Error("Could not find shader '%'", name);
         return nullptr;
     }
     return it->second.get();
 }
 
-std::unique_ptr<Shader> ShaderLibrary::LoadShader(wgpu::Device device, const std::string& filepath)
+std::unique_ptr<Shader> ShaderLibrary::LoadShader(wgpu::Device device, StringView filepath)
 {
-    const std::string shaderSource = Preprocess(ReadFile(filepath));
+    String shaderSource = Preprocess(ReadFile(filepath, &TransientArena), &TransientArena);
+    shaderSource.NullTerminate();
 
     wgpu::ShaderModuleWGSLDescriptor wgslDescriptor = wgpu::Default;
     wgslDescriptor.chain.next = nullptr;
     wgslDescriptor.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
-    wgslDescriptor.code = shaderSource.c_str();
+    wgslDescriptor.code = shaderSource.data;
 
     wgpu::ShaderModuleDescriptor shaderModuleDescriptor = wgpu::Default;
-    shaderModuleDescriptor.label = filepath.c_str();
+    shaderModuleDescriptor.label = filepath.data;
 #if WEBGPU_BACKEND_WGPU
     shaderModuleDescriptor.hintCount = 0;
     shaderModuleDescriptor.hints = nullptr;
@@ -448,7 +465,10 @@ std::unique_ptr<Shader> ShaderLibrary::LoadShader(wgpu::Device device, const std
     return std::make_unique<Shader>(shaderModule, shaderSource);
 }
 
-std::string ShaderLibrary::Preprocess(const std::string& source)
+String ShaderLibrary::Preprocess(StringView source, MemoryArena* arena)
 {
-    return source + m_Header;
+    String out;
+    out.arena = arena;
+    out << source << m_Header;
+    return out;
 }

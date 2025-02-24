@@ -3,44 +3,64 @@
 #include <SDL3/SDL.h>
 #include <cassert>
 #include "log.hpp"
+#include "application.hpp"
 
-std::string GetBasePath()
+StringView GetBasePath()
 {
-    static const char* basePath = SDL_GetBasePath();
-#if __EMSCRIPTEN__
-    return basePath;
-#else
-    return std::string(basePath) + "../";
+    static String basePath;
+    if (basePath.data == nullptr)
+    {
+        basePath.arena = &GlobalArena;
+        basePath += SDL_GetBasePath();
+#ifndef __EMSCRIPTEN__
+        basePath += "../";
 #endif
+    }
+    return basePath;
 }
 
-std::string ReadFile(const std::string& filepath)
+// Returns a null-terminated string for convenience
+StringView GetFullPath(StringView filepath, MemoryArena* arena)
 {
+    String out;
+    out.arena = arena;
+    out << GetBasePath() << filepath << '\0';
+    return out;
+}
+
+String ReadFile(StringView filepath, MemoryArena* arena)
+{
+    StringView fullPath = GetFullPath(filepath, &TransientArena);
+
     size_t dataSize = 0;
-    char* data = (char*)SDL_LoadFile((GetBasePath() + filepath).c_str(), &dataSize);
+    char* data = (char*)SDL_LoadFile(fullPath.data, &dataSize);
     if (data == nullptr)
     {
         return {};
     }
-    Log::Debug("Read '%' (% bytes)", filepath.c_str(), dataSize);
+    Log::Debug("Read '%' (% bytes)", filepath, dataSize);
 
-    std::string out = data;
+    String out;
+    out.arena = arena;
+    out += StringView(data, dataSize);
     SDL_free(data);
 
     return out;
 }
 
-std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
+std::vector<uint8_t> ReadFileBuffer(StringView filepath)
 {
+    StringView fullPath = GetFullPath(filepath, &TransientArena);
+
     std::vector<uint8_t> dataVector;
 
     size_t dataSize = 0;
-    void* data = SDL_LoadFile((GetBasePath() + filepath).c_str(), &dataSize);
+    void* data = SDL_LoadFile(fullPath.data, &dataSize);
     if (data == nullptr)
     {
         return dataVector;
     }
-    Log::Debug("Read '%' (% bytes)", filepath.c_str(), dataSize);
+    Log::Debug("Read '%' (% bytes)", filepath, dataSize);
 
     dataVector.resize(dataSize);
     SDL_memcpy(dataVector.data(), data, dataSize);
@@ -50,45 +70,55 @@ std::vector<uint8_t> ReadFileBuffer(const std::string& filepath)
     return dataVector;
 }
 
-void WriteFile(const std::string& filepath, const std::string& data)
+void WriteFile(StringView filepath, StringView data)
 {
-    const std::string fullPath = GetBasePath() + filepath;
+    StringView fullPath = GetFullPath(filepath, &TransientArena);
     // TODO: There seems to be an SDL_SaveFile() function in the next release, which would simplify this code
-    SDL_IOStream* context = SDL_IOFromFile(fullPath.c_str(), "w+");
+    SDL_IOStream* context = SDL_IOFromFile(fullPath.data, "w+");
     if (context == nullptr)
     {
-        Log::Error("Failed to write file '%' (Failed to create handle)", filepath.c_str());
+        Log::Error("Failed to write file '%' (Failed to create handle)", filepath);
         Log::Error(SDL_GetError());
     }
     else
     {
-        size_t bytesWritten = SDL_WriteIO(context, data.data(), data.size());
-        if (bytesWritten != data.size())
+        size_t bytesWritten = SDL_WriteIO(context, data.data, data.size);
+        if (bytesWritten != data.size)
         {
-            Log::Error("Failed to write file '%' (% bytes written)", filepath.c_str(), bytesWritten);
+            Log::Error("Failed to write file '%' (% bytes written)", filepath, bytesWritten);
             Log::Error(SDL_GetError());
         }
         else
         {
-            Log::Debug("Wrote '%' (% bytes)", filepath.c_str(), bytesWritten);
+            Log::Debug("Wrote '%' (% bytes)", filepath, bytesWritten);
         }
     }
     SDL_CloseIO(context);
     return;
 }
 
-std::vector<std::string> GetFilesInDirectory(const std::string& directory)
+Array<String> GetFilesInDirectory(StringView directory, MemoryArena* arena)
 {
-    std::vector<std::string> filenames;
+    Array<String> filenames;
+    filenames.arena = arena;
+
+    // TODO: This is arbitrary, and is likely more than needed in most cases
+    filenames.Reserve(64);
 
     SDL_EnumerateDirectoryCallback callback = [](void* userData, const char* /* dirname */, const char* filename)
     {
-        std::vector<std::string>& filenames = *(std::vector<std::string>*)userData;
-        filenames.push_back(filename);
+        Array<String>& filenames = *(Array<String>*)userData;
+
+        String str;
+        str.arena = filenames.arena;
+        str.Append(filename);
+
+        filenames.Push(str);
         return SDL_ENUM_CONTINUE;
     };
 
-    bool success = SDL_EnumerateDirectory((GetBasePath() + directory).c_str(), callback, &filenames);
+    StringView fullPath = GetFullPath(directory, &TransientArena);
+    bool success = SDL_EnumerateDirectory(fullPath.data, callback, &filenames);
     if (!success)
     {
         Log::Error(SDL_GetError());
@@ -97,22 +127,22 @@ std::vector<std::string> GetFilesInDirectory(const std::string& directory)
     return filenames;
 }
 
-CharacterInputStream::CharacterInputStream(std::string_view input)
+CharacterInputStream::CharacterInputStream(StringView input)
     : input(input) {}
 
 char CharacterInputStream::Peek() const
 {
-    assert(position >= 0 && position < input.size());
+    assert(position >= 0 && position < input.size);
     return input[position];
 }
 
 char CharacterInputStream::Next()
 {
-    assert(position >= 0 && position < input.size());
+    assert(position >= 0 && position < input.size);
     return input[position++];
 }
 
 bool CharacterInputStream::Eof() const
 {
-    return position >= input.size();
+    return position >= input.size;
 }

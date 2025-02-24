@@ -35,7 +35,7 @@ public:
 
     inline float GetTime() { return m_Time; }
 
-    std::optional<WGPURenderPipeline> CreateRenderPipeline(const std::string& shader, bool depthStencil, wgpu::TextureFormat format);
+    std::optional<WGPURenderPipeline> CreateRenderPipeline(StringView shader, bool depthStencil, wgpu::TextureFormat format);
 
     void ImGuiDebugTextures();
 

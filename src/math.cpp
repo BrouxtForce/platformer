@@ -88,11 +88,6 @@ namespace Math
         return x;
     }
 
-    std::string float2::ToString()
-    {
-        return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
-    }
-
     float2 operator+(const float& left, const float2& right)
     {
         return float2(left + right.x, left + right.y);

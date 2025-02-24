@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstring>
 #include <bit>
+#include <string_view>
 
 #include "memory-arena.hpp"
 #include "math.hpp"
@@ -12,7 +13,7 @@
 template<typename T>
 struct Array
 {
-    static_assert(std::is_trivial_v<T>);
+    static_assert(std::is_trivially_destructible_v<T>);
 
     MemoryArena* arena = nullptr;
 
@@ -90,7 +91,7 @@ struct Array
 template<typename T>
 struct StableArray
 {
-    static_assert(std::is_trivial_v<T>);
+    static_assert(std::is_trivially_destructible_v<T>);
 
     MemoryArena* arena = nullptr;
 
@@ -138,7 +139,6 @@ struct StableArray
         if (ptr >= data && ptr < data + 64)
         {
             int index = ptr - data;
-            *ptr = 0;
             allocatedMask &= ~((uint64_t)1 << index);
         }
         else
@@ -148,9 +148,18 @@ struct StableArray
         }
     }
 
+    inline void Clear()
+    {
+        allocatedMask = 0;
+        if (next != nullptr)
+        {
+            next->Clear();
+        }
+    }
+
     struct Iterator
     {
-        StableArray<T>* currentArray = nullptr;
+        const StableArray<T>* currentArray = nullptr;
         uint64_t currentMask = 0;
 
         T& operator*() const
@@ -192,13 +201,13 @@ struct StableArray
             }
         }
     };
-    Iterator begin()
+    Iterator begin() const
     {
         Iterator iterator { .currentArray = this, .currentMask = allocatedMask };
         iterator.NextNonEmpty();
         return iterator;
     };
-    Iterator end()
+    Iterator end() const
     {
         return {};
     };
@@ -238,6 +247,10 @@ struct String : Array<char>
 
     void Append(double num);
 
+    void NullTerminate();
+
+    void ReplaceAll(char oldValue, char newValue);
+
     void Clear();
 
     bool Equals(StringView str) const;
@@ -260,6 +273,8 @@ struct String : Array<char>
 
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;
+
+    static String Copy(StringView str, MemoryArena* arena);
 };
 
 struct StringView
@@ -270,13 +285,12 @@ struct StringView
     StringView() = default;
     StringView(const String& str);
 
-    inline constexpr StringView(const char* str)
+    constexpr StringView(const char* str)
     {
         data = str;
-        size = GetCStringLength(str);
         if (std::is_constant_evaluated())
         {
-            GetCStringLength(str);
+            size = GetCStringLength(str);
         }
         else
         {
@@ -284,12 +298,35 @@ struct StringView
         }
     }
 
+    constexpr StringView(const char* str, size_t length)
+    {
+        data = str;
+        size = length;
+    }
+
+    constexpr StringView(const char& c)
+    {
+        data = &c;
+        size = 1;
+    }
+
     StringView Substr(size_t position, size_t length = String::NPOS) const;
 
     bool Equals(StringView str) const;
+    bool EndsWith(StringView suffix) const;
 
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;
 
     const char& operator[](size_t index) const;
+};
+
+// TODO: Remove reliance on std::string_view
+template<>
+struct std::hash<StringView>
+{
+    size_t operator()(const StringView& view) const
+    {
+        return std::hash<std::string_view>{}(std::string_view(view.data, view.size));
+    }
 };

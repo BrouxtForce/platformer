@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <string>
 
 namespace Math
 {
@@ -44,8 +43,6 @@ namespace Math
         float2 operator-() const;
 
         float& operator[](int index);
-
-        std::string ToString();
     };
 
     float2 operator+(const float& left, const float2& right);

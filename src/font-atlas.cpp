@@ -189,7 +189,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     return true;
 }
 
-bool FontAtlas::LoadFont(wgpu::Queue queue, const std::string& path, const Charset& charset, float fontSize)
+bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& charset, float fontSize)
 {
     m_FontSize = fontSize;
 
@@ -300,7 +300,7 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, const std::string& path, const Chars
     return true;
 }
 
-float FontAtlas::MeasureTextHeight(const std::string &text)
+float FontAtlas::MeasureTextHeight(StringView text)
 {
     return GetTextHeight(text) / m_FontSize;
 }
@@ -310,9 +310,9 @@ void FontAtlas::NewFrame()
     m_QuadsWritten = 0;
 }
 
-void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position)
+void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, StringView text, float aspect, float size, Math::float2 position)
 {
-    if (text.empty()) return;
+    if (text.size == 0) return;
 
     struct GlyphQuad
     {
@@ -323,18 +323,18 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     };
 
     std::vector<GlyphQuad> quads;
-    quads.reserve(text.size());
+    quads.reserve(text.size);
 
     float scale = size / m_FontSize;
 
     position.x -= GetTextWidth(text) / 2 * scale;
-    position.y -= GetTextHeight(std::string(1, s_DefaultChar)) / 2 * scale;
+    position.y -= GetTextHeight(s_DefaultChar) / 2 * scale;
 
     auto a = GetGlyph(s_DefaultChar);
     position.y += (a.offset.y + a.size.y) * scale;
 
     float currentPoint = 0.0f;
-    for (int i = 0; i < (int)text.size(); i++)
+    for (int i = 0; i < (int)text.size; i++)
     {
         const Glyph& glyph = GetGlyph(text[i]);
 
@@ -376,22 +376,22 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
     m_QuadsWritten += quads.size();
 }
 
-float FontAtlas::GetTextWidth(const std::string& text) const
+float FontAtlas::GetTextWidth(StringView text) const
 {
-    if (text.empty()) return 0.0f;
+    if (text.size == 0) return 0.0f;
 
     const Glyph& leftGlyph = GetGlyph(text[0]);
-    if (text.size() == 1)
+    if (text.size == 1)
     {
         return leftGlyph.size.x;
     }
 
-    const Glyph& rightGlyph = GetGlyph(text.back());
+    const Glyph& rightGlyph = GetGlyph(text[text.size - 1]);
 
     float left = leftGlyph.offset.x;
     float right = leftGlyph.advanceWidth + rightGlyph.offset.x + rightGlyph.size.x;
 
-    for (int i = 1; i < (int)text.size() - 1; i++)
+    for (int i = 1; i < (int)text.size - 1; i++)
     {
         const Glyph& glyph = GetGlyph(text[i]);
         right += glyph.advanceWidth;
@@ -400,11 +400,11 @@ float FontAtlas::GetTextWidth(const std::string& text) const
     return right - left;
 }
 
-float FontAtlas::GetTextHeight(const std::string& text) const
+float FontAtlas::GetTextHeight(StringView text) const
 {
     float top = 0.0f;
     float bottom = 0.0f;
-    for (int i = 0; i < (int)text.size(); i++)
+    for (int i = 0; i < (int)text.size; i++)
     {
         const Glyph& glyph = GetGlyph(text[i]);
         top    = std::min(glyph.offset.y, top);

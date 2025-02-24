@@ -3,7 +3,6 @@
 #if DEBUG
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
-#include <imgui_stdlib.h>
 #endif
 
 #include "log.hpp"
@@ -55,7 +54,10 @@ bool Application::Init(GameState startGameState)
         return false;
     }
 
-    LoadScene((std::string)firstSceneFilepath);
+    m_Scene.Init(&GlobalArena);
+    m_Menu.Init(&GlobalArena);
+
+    LoadScene(firstSceneFilepath);
     m_GameState = startGameState;
 
     return true;
@@ -93,10 +95,10 @@ bool Application::Loop(float deltaTime)
     return success;
 }
 
-void Application::LoadScene(const std::string& sceneFilepath)
+void Application::LoadScene(StringView sceneFilepath)
 {
     m_Scene.Clear();
-    m_Scene.Deserialize(ReadFile(sceneFilepath));
+    m_Scene.Deserialize(ReadFile(sceneFilepath, &TransientArena));
 
     Entity* playerEntity = m_Scene.CreateEntity();
     playerEntity->material.WriteColor({ 0.5f, 0.5f, 0.5f });
@@ -118,36 +120,36 @@ Entity* GetHoveredEntity(const Scene& scene, Math::float2 worldPosition)
         }
     };
 
-    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    for (Entity& entity : scene.entities)
     {
-        Math::float2 rotatedWorldPosition = entity->transform.position + Math::RotateVector(worldPosition - entity->transform.position, -entity->transform.rotation);
-        switch (entity->shape)
+        Math::float2 rotatedWorldPosition = entity.transform.position + Math::RotateVector(worldPosition - entity.transform.position, -entity.transform.rotation);
+        switch (entity.shape)
         {
             case Shape::Ellipse:
             {
                 float distanceSquared = Math::DistanceSquared(
-                    entity->transform.position / entity->transform.scale,
-                    rotatedWorldPosition / entity->transform.scale
+                    entity.transform.position / entity.transform.scale,
+                    rotatedWorldPosition / entity.transform.scale
                 );
                 if (distanceSquared <= 1.0f)
                 {
-                    HitEntity(entity.get());
+                    HitEntity(&entity);
                 }
                 break;
             }
             case Shape::Rectangle:
             {
-                Math::float2 min = entity->transform.position - entity->transform.scale;
-                Math::float2 max = entity->transform.position + entity->transform.scale;
+                Math::float2 min = entity.transform.position - entity.transform.scale;
+                Math::float2 max = entity.transform.position + entity.transform.scale;
                 if (rotatedWorldPosition.x >= min.x && rotatedWorldPosition.y >= min.y &&
                     rotatedWorldPosition.x <= max.x && rotatedWorldPosition.y <= max.y)
                 {
-                    HitEntity(entity.get());
+                    HitEntity(&entity);
                 }
                 break;
             }
             default:
-                Log::Warn("Invalid shape: %", (int)entity->shape);
+                Log::Warn("Invalid shape: %", (int)entity.shape);
         }
     }
     return closestEntity;
@@ -229,7 +231,7 @@ bool Application::LoopEditor(float deltaTime)
     ImGui::Begin("Inspector");
     if (inspectedEntity != nullptr)
     {
-        ImGui::InputText("Name:", &inspectedEntity->name);
+        // ImGui::InputText("Name:", &inspectedEntity->name);
 
         ImGui::Text("ID: %i", inspectedEntity->id);
         ImGuiFlag("Flag: Collider",     inspectedEntity->flags, (uint16_t)EntityFlags::Collider);
@@ -296,8 +298,8 @@ bool Application::LoopEditor(float deltaTime)
     ImGui::DragFloat("Camera scale", &m_Camera.transform.scale.x, 0.01f);
     m_Camera.transform.scale.y = m_Camera.transform.scale.x;
 
-    static std::string sceneFilepath = (std::string)firstSceneFilepath;
-    ImGui::InputText("Scene path:", &sceneFilepath);
+    static char sceneFilepath[100] { 0 };
+    ImGui::InputText("Scene path:", sceneFilepath, sizeof(sceneFilepath));
     if (ImGui::Button("Load"))
     {
         LoadScene(sceneFilepath);
@@ -305,7 +307,7 @@ bool Application::LoopEditor(float deltaTime)
     ImGui::SameLine();
     if (ImGui::Button("Save"))
     {
-        WriteFile(sceneFilepath, m_Scene.Serialize());
+        WriteFile(sceneFilepath, m_Scene.Serialize(&TransientArena));
     }
 
     ImGui::End();
@@ -361,7 +363,7 @@ bool Application::LoopMainMenu(float deltaTime)
             for (int i = 0; i < (int)m_Input.controls.size(); i++)
             {
                 float y = (float)(2 - i) * 0.17f;
-                m_Menu.Text((std::string)KeyNames[i], { -0.8f, y }, 0.06f);
+                m_Menu.Text(KeyNames[i], { -0.8f, y }, 0.06f);
                 for (int j = 0; j < (int)m_Input.controls[i].size(); j++)
                 {
                     bool selected = i == m_ActiveControlRebind[0] && j == m_ActiveControlRebind[1];

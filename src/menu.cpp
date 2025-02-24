@@ -1,15 +1,20 @@
 #include "menu.hpp"
 
+void Menu::Init(MemoryArena* arena)
+{
+    scene.Init(arena);
+}
+
 void Menu::Begin(Math::float2 mousePosition, bool mousePressed)
 {
     m_MousePosition = mousePosition;
     m_MousePressed = mousePressed;
 
-    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    for (Entity& entity : scene.entities)
     {
-        entity->flags |= (uint16_t)EntityFlags::Hidden;
+        entity.flags |= (uint16_t)EntityFlags::Hidden;
     }
-    m_EntityIndex = 0;
+    scene.Clear();
 }
 
 void Menu::SetBackgroundColor(Math::Color color)
@@ -22,7 +27,7 @@ void Menu::SetFillColor(Math::Color color)
     m_FillColor = color;
 }
 
-void Menu::Text(const std::string& text, Math::float2 center, float scale)
+void Menu::Text(StringView text, Math::float2 center, float scale)
 {
     Entity* entity = GetNextEntity();
     entity->name = text;
@@ -32,7 +37,7 @@ void Menu::Text(const std::string& text, Math::float2 center, float scale)
     entity->material.WriteColor(m_FillColor);
 }
 
-bool Menu::Button(const std::string& text, Math::float2 center, Math::float2 extent, Math::float2 padding)
+bool Menu::Button(StringView text, Math::float2 center, Math::float2 extent, Math::float2 padding)
 {
     Entity* entity = GetNextEntity();
     entity->flags = (uint16_t)EntityFlags::None;
@@ -61,15 +66,5 @@ bool Menu::Button(const std::string& text, Math::float2 center, Math::float2 ext
 
 Entity* Menu::GetNextEntity()
 {
-    Entity* entity = nullptr;
-    if (m_EntityIndex >= (int)scene.entities.size())
-    {
-        entity = scene.CreateEntity();
-    }
-    else
-    {
-        entity = scene.entities[m_EntityIndex].get();
-    }
-    m_EntityIndex++;
-    return entity;
+    return scene.CreateEntity();
 }

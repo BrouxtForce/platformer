@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "math.hpp"
+#include "data-structures.hpp"
 
 enum class Key
 {
@@ -15,7 +16,7 @@ enum class Key
     Count
 };
 
-constexpr static inline std::array<std::string_view, (int)Key::Count> KeyNames
+constexpr static inline std::array<StringView, (int)Key::Count> KeyNames
 {
     "Up", "Left", "Down", "Right", "Jump", "Boost"
 };

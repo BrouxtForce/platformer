@@ -19,36 +19,36 @@ namespace Physics
             }
         };
 
-        for (const std::unique_ptr<Entity>& entity : scene.entities)
+        for (Entity& entity : scene.entities)
         {
-            if ((entity->flags & (uint16_t)EntityFlags::GravityZone) == 0)
+            if ((entity.flags & (uint16_t)EntityFlags::GravityZone) == 0)
             {
                 continue;
             }
-            Math::float2 rotatedPosition = entity->transform.position + Math::RotateVector(position - entity->transform.position, -entity->transform.rotation);
-            switch (entity->shape)
+            Math::float2 rotatedPosition = entity.transform.position + Math::RotateVector(position - entity.transform.position, -entity.transform.rotation);
+            switch (entity.shape)
             {
                 case Shape::Rectangle: {
-                    Math::float2 min = entity->transform.position - entity->transform.scale;
-                    Math::float2 max = entity->transform.position + entity->transform.scale;
+                    Math::float2 min = entity.transform.position - entity.transform.scale;
+                    Math::float2 max = entity.transform.position + entity.transform.scale;
                     if (rotatedPosition.x >= min.x && rotatedPosition.x <= max.x &&
                         rotatedPosition.y >= min.y && rotatedPosition.y <= max.y)
                     {
-                        Math::float2 direction = Math::Direction(entity->transform.rotation - Math::PI / 2.0f);
+                        Math::float2 direction = Math::Direction(entity.transform.rotation - Math::PI / 2.0f);
                         RegisterGravityZoneInfo({
                             .active = true,
                             .shape = Shape::Rectangle,
                             .direction = direction,
                             .closestEndDirection = direction,
-                            .position = entity->transform.position,
-                            .radius = entity->transform.scale.x
-                        }, entity.get());
+                            .position = entity.transform.position,
+                            .radius = entity.transform.scale.x
+                        }, &entity);
                     }
                     break;
                 }
                 case Shape::Ellipse: {
-                    Math::float2 zoneCenter = entity->transform.position;
-                    float zoneRadius = entity->transform.scale.x;
+                    Math::float2 zoneCenter = entity.transform.position;
+                    float zoneRadius = entity.transform.scale.x;
                     if (Math::Distance(position, zoneCenter) > zoneRadius)
                     {
                         break;
@@ -60,16 +60,16 @@ namespace Physics
                     }
 
                     float angle = std::atan2(-direction.y, -direction.x);
-                    if (angle >= entity->gravityZone.minAngle && angle <= entity->gravityZone.maxAngle)
+                    if (angle >= entity.gravityZone.minAngle && angle <= entity.gravityZone.maxAngle)
                     {
                         Math::float2 closestEndDirection;
-                        if (std::abs(angle - entity->gravityZone.minAngle) < std::abs(angle - entity->gravityZone.maxAngle))
+                        if (std::abs(angle - entity.gravityZone.minAngle) < std::abs(angle - entity.gravityZone.maxAngle))
                         {
-                            closestEndDirection = -Math::Direction(entity->gravityZone.minAngle);
+                            closestEndDirection = -Math::Direction(entity.gravityZone.minAngle);
                         }
                         else
                         {
-                            closestEndDirection = -Math::Direction(entity->gravityZone.maxAngle);
+                            closestEndDirection = -Math::Direction(entity.gravityZone.maxAngle);
                         }
                         RegisterGravityZoneInfo({
                             .active = true,
@@ -78,7 +78,7 @@ namespace Physics
                             .closestEndDirection = closestEndDirection,
                             .position = zoneCenter,
                             .radius = zoneRadius
-                        }, entity.get());
+                        }, &entity);
                     }
                     break;
                 }
@@ -118,21 +118,21 @@ namespace Physics
     CollisionData EllipseCast(const Scene& scene, const Transform& ellipse, Math::float2 velocity, uint16_t entityFlags)
     {
         CollisionData minCollision { .collided = false, .t = INFINITY };
-        for (const std::unique_ptr<Entity>& entity : scene.entities)
+        for (const Entity& entity : scene.entities)
         {
-            if ((entity->flags & entityFlags) == 0)
+            if ((entity.flags & entityFlags) == 0)
             {
                 continue;
             }
 
             CollisionData collision { .collided = false };
-            switch (entity->shape)
+            switch (entity.shape)
             {
                 case Shape::Rectangle:
-                    collision = EllipseRectCollision(ellipse, velocity, entity->transform);
+                    collision = EllipseRectCollision(ellipse, velocity, entity.transform);
                     break;
                 case Shape::Ellipse:
-                    collision = CircleCircleCollision(ellipse, velocity, entity->transform);
+                    collision = CircleCircleCollision(ellipse, velocity, entity.transform);
                     break;
             }
             if (!collision.collided)
@@ -142,7 +142,7 @@ namespace Physics
             if (collision.t < minCollision.t)
             {
                 minCollision = collision;
-                minCollision.entity = entity.get();
+                minCollision.entity = &entity;
             }
         }
         return minCollision;

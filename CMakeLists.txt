@@ -45,7 +45,6 @@ target_include_directories(game PUBLIC
     include
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-    ${imgui_SOURCE_DIR}/misc/cpp
 )
 
 target_compile_definitions(game PRIVATE

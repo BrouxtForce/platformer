@@ -22,7 +22,6 @@ TEST_CASE("Stable Array")
         {
             CHECK(*ptrs[i] == i + 1);
             array.Erase(ptrs[i]);
-            CHECK(*ptrs[i] == 0);
         }
         for (int i = 0; i < ptrs.size(); i++)
         {

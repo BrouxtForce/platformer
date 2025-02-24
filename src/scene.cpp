@@ -14,25 +14,25 @@ void Material::WriteColor(Math::Color color)
 
 namespace Serialization
 {
-    std::ostream& operator<<(std::ostream& stream, const Math::float2& vector)
+    String& operator<<(String& stream, const Math::float2& vector)
     {
         stream << vector.x << ' ' << vector.y;
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Math::Color& color)
+    String& operator<<(String& stream, const Math::Color& color)
     {
         stream << color.r << ' ' << color.g << ' ' << color.b << ' ' << color.a;
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Transform& transform)
+    String& operator<<(String& stream, const Transform& transform)
     {
         stream << transform.position << ' ' << transform.scale << ' ' << transform.rotation;
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Material& material)
+    String& operator<<(String& stream, const Material& material)
     {
         bool first = true;
         for (uint32_t value : material.data)
@@ -48,21 +48,19 @@ namespace Serialization
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Shape& shape)
+    String& operator<<(String& stream, const Shape& shape)
     {
         stream << (uint32_t)shape;
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const GravityZone& gravityZone)
+    String& operator<<(String& stream, const GravityZone& gravityZone)
     {
-        std::streamsize prevPrecision = stream.precision(8);
         stream << gravityZone.minAngle << ' ' << gravityZone.maxAngle;
-        stream.precision(prevPrecision);
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Entity& entity)
+    String& operator<<(String& stream, const Entity& entity)
     {
         stream << entity.flags << ' ';
         stream << entity.zIndex << ' ';
@@ -73,7 +71,7 @@ namespace Serialization
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Scene::Properties& properties)
+    String& operator<<(String& stream, const Scene::Properties& properties)
     {
         stream << properties.backgroundColor << ' ' << properties.flags;
         return stream;
@@ -143,12 +141,14 @@ namespace Deserialization
     }
 }
 
+void Scene::Init(MemoryArena* arena)
+{
+    entities.arena = arena;
+}
+
 Entity* Scene::CreateEntity()
 {
-    static uint16_t nextId = 1;
-
-    entities.push_back(std::make_unique<Entity>());
-    Entity* entity = entities.back().get();
+    Entity* entity = entities.Push(Entity{});
     entity->id = nextId++;
     entity->zIndex = 100;
 
@@ -159,56 +159,53 @@ void Scene::DestroyEntity(Entity* entity)
 {
     assert(entity != nullptr);
     assert((entity->flags & (uint16_t)EntityFlags::Destroyed) == 0);
-    entity->flags |= (uint16_t)EntityFlags::Destroyed;
+    // entity->flags |= (uint16_t)EntityFlags::Destroyed;
+    entities.Erase(entity);
 }
 
 void Scene::EndFrame()
 {
-    int lastEntityIndex = entities.size() - 1;
-    for (int i = (int)entities.size() - 1; i >= 0; i--)
-    {
-        if ((entities[i]->flags & (uint16_t)EntityFlags::Destroyed) == 0)
-        {
-            continue;
-        }
-        entities[i] = std::move(entities[lastEntityIndex]);
-        lastEntityIndex--;
-    }
-    entities.resize(lastEntityIndex + 1);
+    // TODO: Remove
 }
 
 void Scene::Clear()
 {
-    entities.clear();
+    entities.Clear();
+    nextId = 0;
 }
 
 // TODO: Serialize and deserialize Entity::name
-std::string Scene::Serialize() const
+String Scene::Serialize(MemoryArena* arena) const
 {
     using namespace Serialization;
 
-    std::stringstream ss;
-    ss << properties << '\n';
-    for (int i = 0; i < (int)entities.size(); i++)
+    String out;
+    out.arena = arena;
+
+    out << properties << '\n';
+    bool first = true;
+    for (const Entity& entity : entities)
     {
-        if ((entities[i]->flags & (uint16_t)EntityFlags::Player) != 0)
+        if ((entity.flags & (uint16_t)EntityFlags::Player) != 0)
         {
             continue;
         }
-        if (i != 0)
+        if (!first)
         {
-            ss << '\n';
+            out << '\n';
         }
-        ss << *entities[i];
+        first = false;
+        out << entity;
     }
-    return ss.str();
+    return out;
 }
 
-void Scene::Deserialize(const std::string& data)
+void Scene::Deserialize(StringView data)
 {
     using namespace Deserialization;
 
-    std::stringstream ss(data);
+    // TODO: Remove usage of std::string
+    std::stringstream ss((std::string)std::string_view(data.data, data.size));
     ss >> properties;
     while (!ss.eof())
     {

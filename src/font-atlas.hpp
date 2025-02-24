@@ -1,18 +1,19 @@
 #pragma once
 
-#include <string>
 #include <array>
 
 #include <webgpu/webgpu.hpp>
 
 #include "math.hpp"
 #include "buffer.hpp"
+#include "data-structures.hpp"
 
 class Renderer;
 
 class Charset
 {
 public:
+    // TODO: Change to StringView
     inline constexpr Charset(std::string_view str)
     {
         for (char c : str)
@@ -45,13 +46,13 @@ public:
     bool Init(Renderer& renderer, int width, int height);
 
     // Returns true if successful
-    bool LoadFont(wgpu::Queue queue, const std::string& path, const Charset& charset, float fontSize);
+    bool LoadFont(wgpu::Queue queue, StringView path, const Charset& charset, float fontSize);
 
-    float MeasureTextHeight(const std::string& text);
+    float MeasureTextHeight(StringView text);
 
     void NewFrame();
     // Renders the text horizontally centered
-    void RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, const std::string& text, float aspect, float size, Math::float2 position);
+    void RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEncoder, StringView text, float aspect, float size, Math::float2 position);
 
     inline wgpu::TextureView GetTextureView()
     {
@@ -91,8 +92,8 @@ private:
     static constexpr char s_DefaultChar = '?';
     std::unordered_map<char, Glyph> m_GlyphMap;
 
-    float GetTextWidth(const std::string& text) const;
-    float GetTextHeight(const std::string& text) const;
+    float GetTextWidth(StringView text) const;
+    float GetTextHeight(StringView text) const;
 
     const Glyph& GetGlyph(char c) const;
 };

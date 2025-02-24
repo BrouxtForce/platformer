@@ -11,6 +11,7 @@
 #include "renderer.hpp"
 #include "utility.hpp"
 #include "log.hpp"
+#include "application.hpp"
 
 bool Renderer::Init(SDL_Window* window)
 {
@@ -330,60 +331,60 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     m_TimeBuffer.Write(m_Queue, m_Time);
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
-    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    for (Entity& entity : scene.entities)
     {
-        UpdateEntity(entity.get());
-        if (!renderHiddenEntities && entity->flags & (uint16_t)EntityFlags::Hidden)
+        UpdateEntity(&entity);
+        if (!renderHiddenEntities && entity.flags & (uint16_t)EntityFlags::Hidden)
         {
             continue;
         }
 
-        DrawData& drawData = m_EntityDrawData[entity->id];
+        DrawData& drawData = m_EntityDrawData[entity.id];
         if (drawData.empty)
         {
-            Log::Debug("Create entity draw data (%)", entity->id);
+            Log::Debug("Create entity draw data (%)", entity.id);
             CreateDrawData(drawData);
         }
         TransformBindGroupData transformData {
-            .transform = entity->transform.GetMatrix(),
-            .zIndex = entity->zIndex
+            .transform = entity.transform.GetMatrix(),
+            .zIndex = entity.zIndex
         };
-        drawData.materialBuffer.Write(m_Queue, entity->material);
+        drawData.materialBuffer.Write(m_Queue, entity.material);
         drawData.transformBuffer.Write(m_Queue, transformData);
         renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
-        if ((entity->flags & (uint16_t)EntityFlags::Text) != 0)
+        if ((entity.flags & (uint16_t)EntityFlags::Text) != 0)
         {
             // "Ag" is an approximation of the entire alphabet
             float height = m_FontAtlas.MeasureTextHeight("Ag");
-            m_FontAtlas.RenderText(m_Queue, renderEncoder, entity->name, 1.0f, 2.0f / height, 0.0f);
+            m_FontAtlas.RenderText(m_Queue, renderEncoder, entity.name, 1.0f, 2.0f / height, 0.0f);
             continue;
         }
 
-        if (entity->flags & (uint16_t)EntityFlags::Lava)
+        if (entity.flags & (uint16_t)EntityFlags::Lava)
         {
             renderEncoder.setPipeline(m_LavaRenderPipeline);
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
-        if (entity->flags & (uint16_t)EntityFlags::Checkpoint)
+        if (entity.flags & (uint16_t)EntityFlags::Checkpoint)
         {
             renderEncoder.setPipeline(m_CheckpointRenderPipeline);
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
-        if (entity->flags & (uint16_t)EntityFlags::Exit)
+        if (entity.flags & (uint16_t)EntityFlags::Exit)
         {
             renderEncoder.setPipeline(m_ExitRenderPipeline);
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
 
-        switch (entity->shape)
+        switch (entity.shape)
         {
             case Shape::Rectangle:
-                if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+                if (entity.flags & (uint16_t)EntityFlags::GravityZone)
                 {
                     renderEncoder.setPipeline(m_GravityZoneRenderPipeline);
                 }
@@ -393,7 +394,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
                 }
                 break;
             case Shape::Ellipse:
-                if (entity->flags & (uint16_t)EntityFlags::GravityZone)
+                if (entity.flags & (uint16_t)EntityFlags::GravityZone)
                 {
                     renderEncoder.setPipeline(m_RadialGravityZoneRenderPipeline);
                 }
@@ -476,36 +477,36 @@ void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::Textur
     m_CameraBuffer.Write(m_Queue, viewMatrix);
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
-    for (const std::unique_ptr<Entity>& entity : scene.entities)
+    for (const Entity& entity : scene.entities)
     {
-        if ((entity->flags & (uint16_t)EntityFlags::Light) == 0)
+        if ((entity.flags & (uint16_t)EntityFlags::Light) == 0)
         {
             continue;
         }
 
-        DrawData& drawData = m_EntityDrawData[entity->id];
+        DrawData& drawData = m_EntityDrawData[entity.id];
         if (drawData.empty)
         {
-            Log::Debug("Create entity draw data (%)", entity->id);
+            Log::Debug("Create entity draw data (%)", entity.id);
             CreateDrawData(drawData);
         }
         TransformBindGroupData transformData {
-            .transform = entity->transform.GetMatrix(),
-            .zIndex = entity->zIndex
+            .transform = entity.transform.GetMatrix(),
+            .zIndex = entity.zIndex
         };
-        drawData.materialBuffer.Write(m_Queue, entity->material);
+        drawData.materialBuffer.Write(m_Queue, entity.material);
         drawData.transformBuffer.Write(m_Queue, transformData);
         renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
-        if (entity->flags & (uint16_t)EntityFlags::Lava)
+        if (entity.flags & (uint16_t)EntityFlags::Lava)
         {
             renderEncoder.setPipeline(m_LavaLightRenderPipeline);
             renderEncoder.draw(4, 1, 0, 0);
             continue;
         }
 
-        switch (entity->shape)
+        switch (entity.shape)
         {
             case Shape::Rectangle:
                 renderEncoder.setPipeline(m_QuadLightRenderPipeline);
@@ -583,20 +584,27 @@ void Renderer::Resize()
     m_Lighting.FitToScreen(m_Width, m_Height);
 }
 
-std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::string &shaderName, bool depthStencil, wgpu::TextureFormat format)
+std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(StringView shaderName, bool depthStencil, wgpu::TextureFormat format)
 {
     const Shader* shader = m_ShaderLibrary.GetShader(shaderName);
     if (!shader)
     {
-        Log::Error("Shader '%' does not exist.", shaderName.c_str());
+        Log::Error("Shader '%' does not exist.", shaderName);
         return std::nullopt;
     }
-    std::string vertexEntry = shaderName + "_vert";
-    std::string fragmentEntry = shaderName + "_frag";
-    std::replace(vertexEntry.begin(), vertexEntry.end(), '-', '_');
-    std::replace(fragmentEntry.begin(), fragmentEntry.end(), '-', '_');
+    String vertexEntry;
+    vertexEntry.arena = &TransientArena;
+    vertexEntry << shaderName << "_vert" << '\0';
+    vertexEntry.ReplaceAll('-', '_');
 
-    const std::string pipelineName = shaderName + " Render Pipeline";
+    String fragmentEntry;
+    fragmentEntry.arena = &TransientArena;
+    fragmentEntry << shaderName << "_frag" << '\0';
+    fragmentEntry.ReplaceAll('-', '_');
+
+    String pipelineName;
+    pipelineName.arena = &TransientArena;
+    pipelineName << shaderName << " Render Pipeline";
 
     WGPUColorTargetState colorTarget {
         .nextInChain = nullptr,
@@ -608,7 +616,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
         .module = shader->shaderModule,
-        .entryPoint = fragmentEntry.c_str(),
+        .entryPoint = fragmentEntry.data,
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -631,12 +639,12 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(const std::stri
 
     WGPURenderPipelineDescriptor pipelineDescriptor {
         .nextInChain = nullptr,
-        .label = pipelineName.c_str(),
+        .label = pipelineName.data,
         .layout = m_PipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = shader->shaderModule,
-            .entryPoint = vertexEntry.c_str(),
+            .entryPoint = vertexEntry.data,
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,
@@ -789,7 +797,7 @@ void Renderer::CreateDrawData(DrawData& drawData)
 
 void Renderer::UpdateEntity(Entity* entity)
 {
-    std::string_view shaderName;
+    StringView shaderName;
     if (entity->flags & (uint16_t)EntityFlags::Text)
     {
         shaderName = "text";
@@ -829,5 +837,5 @@ void Renderer::UpdateEntity(Entity* entity)
         Log::Error("Could not find shader for entity");
         return;
     }
-    entity->shader = m_ShaderLibrary.GetShader((std::string)shaderName);
+    entity->shader = m_ShaderLibrary.GetShader(shaderName);
 }

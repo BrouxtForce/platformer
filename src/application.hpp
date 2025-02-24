@@ -39,7 +39,7 @@ public:
     bool Loop(float deltaTime);
     void Exit();
 
-    void LoadScene(const std::string& sceneName);
+    void LoadScene(StringView sceneName);
 
     void OnEvent(const SDL_Event& event);
 
@@ -47,7 +47,7 @@ private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
 
-    static constexpr std::string_view firstSceneFilepath = "assets/scenes/castle.txt";
+    static constexpr StringView firstSceneFilepath = "assets/scenes/castle.txt";
 
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;

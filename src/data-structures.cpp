@@ -83,6 +83,26 @@ void String::Append(double num)
     size += appendedSize;
 }
 
+void String::NullTerminate()
+{
+    if (data[size - 1] == '\0')
+    {
+        return;
+    }
+    Append('\0');
+}
+
+void String::ReplaceAll(char oldValue, char newValue)
+{
+    for (size_t i = 0; i < size; i++)
+    {
+        if (data[i] == oldValue)
+        {
+            data[i] = newValue;
+        }
+    }
+}
+
 void String::Clear()
 {
     memset(data, 0, size);
@@ -130,6 +150,14 @@ bool String::operator!=(StringView str) const
     return !Equals(str);
 }
 
+String String::Copy(StringView str, MemoryArena* arena)
+{
+    String out;
+    out.arena = arena;
+    out += str;
+    return out;
+}
+
 StringView::StringView(const String& str)
 {
     data = str.data;
@@ -153,6 +181,20 @@ bool StringView::Equals(StringView str) const
         return false;
     }
     return memcmp(data, str.data, size) == 0;
+}
+
+bool StringView::EndsWith(StringView suffix) const
+{
+    if (suffix.size > size) return false;
+
+    for (size_t i = 0; i < suffix.size; i++)
+    {
+        if (data[size - suffix.size + i] != suffix[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool StringView::operator==(StringView str) const
