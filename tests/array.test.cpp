@@ -73,5 +73,79 @@ TEST_CASE("Array")
         CHECK(array.data == prevData);
     }
 
+    SUBCASE("Array iterator")
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            array.Push(i + 1);
+        }
+        for (int& num : array)
+        {
+            num--;
+        }
+        for (int i = 0; i < 16; i++)
+        {
+            CHECK(array[i] == i);
+        }
+    }
+
     arena.Free();
+}
+
+TEST_CASE("Span")
+{
+    MemoryArena arena;
+    arena.Init(128, MemoryArenaFlags_ClearToZero);
+
+    Array<int> array;
+    array.arena = &arena;
+
+    for (int i = 1; i <= 32; i++)
+    {
+        array.Push(i);
+    }
+
+    SUBCASE("Iterator")
+    {
+        Span span = array;
+        int index = 0;
+        for (int& num : span)
+        {
+            num--;
+        }
+
+        for (int i = 0; i < 32; i++)
+        {
+            CHECK(array[i] == i);
+        }
+    }
+
+    SUBCASE("operator[]")
+    {
+        Span span = array;
+        for (int i = 0; i < span.size; i++)
+        {
+            CHECK(span[i] == i + 1);
+        }
+    }
+
+    SUBCASE("Slice()")
+    {
+        Span span = array;
+        CHECK(span == array);
+
+        span = span.Slice(0);
+        CHECK(span == array);
+
+        span = span.Slice(1);
+        CHECK(span.size == array.size - 1);
+        for (int i = 1; i < array.size; i++)
+        {
+            CHECK(span[i - 1] == array[i]);
+        }
+
+        span = span.Slice(1, 1);
+        CHECK(span[0] == 3);
+        CHECK(span.size == 1);
+    }
 }

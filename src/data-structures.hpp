@@ -77,6 +77,83 @@ struct Array
         assert(index >= 0 && index < size);
         return data[index];
     }
+
+    struct Iterator
+    {
+        T* ptr = nullptr;
+
+        inline T& operator*() const
+        {
+            return *ptr;
+        }
+        inline T& operator++()
+        {
+            ptr++;
+            return *ptr;
+        }
+        inline bool operator==(Iterator other)
+        {
+            return ptr == other.ptr;
+        };
+    };
+    Iterator begin()
+    {
+        return { .ptr = data };
+    }
+    Iterator end()
+    {
+        return { .ptr = data + size };
+    }
+};
+
+template<typename T>
+struct Span
+{
+    T* data = nullptr;
+    size_t size = 0;
+
+    constexpr Span() = default;
+
+    constexpr Span(const Array<T>& array)
+    {
+        data = array.data;
+        size = array.size;
+    }
+
+    constexpr Span(T* data, size_t size)
+        : data(data), size(size) {}
+
+    Span<T> Slice(size_t start, size_t length = SIZE_MAX) const
+    {
+        return {
+            data + start,
+            Math::Min(size - start, length)
+        };
+    }
+
+    T& operator[](size_t index) const
+    {
+        assert(index >= 0 && index < size);
+        return data[index];
+    }
+
+    bool operator==(const Span<T>& other) const
+    {
+        if (size != other.size)
+        {
+            return false;
+        }
+        return memcmp(data, other.data, size) == 0;
+    }
+
+    Array<T>::Iterator begin()
+    {
+        return { .ptr = data };
+    }
+    Array<T>::Iterator end()
+    {
+        return { .ptr = data + size };
+    }
 };
 
 /*
@@ -162,13 +239,13 @@ struct StableArray
         const StableArray<T>* currentArray = nullptr;
         uint64_t currentMask = 0;
 
-        T& operator*() const
+        inline T& operator*() const
         {
             assert(currentArray != nullptr && currentMask != 0);
             int next = std::countr_zero(currentMask);
             return currentArray->data[next];
         }
-        T& operator++()
+        inline T& operator++()
         {
             assert(currentArray != nullptr && currentMask != 0);
             int next = std::countr_zero(currentMask);
@@ -177,11 +254,11 @@ struct StableArray
             NextNonEmpty();
             return *result;
         }
-        bool operator==(Iterator other)
+        inline bool operator==(Iterator other)
         {
             return currentArray == other.currentArray && currentMask == other.currentMask;
         };
-        void NextNonEmpty()
+        inline void NextNonEmpty()
         {
             while (currentMask == 0)
             {
@@ -201,13 +278,13 @@ struct StableArray
             }
         }
     };
-    Iterator begin() const
+    inline Iterator begin() const
     {
         Iterator iterator { .currentArray = this, .currentMask = allocatedMask };
         iterator.NextNonEmpty();
         return iterator;
     };
-    Iterator end() const
+    inline Iterator end() const
     {
         return {};
     };
