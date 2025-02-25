@@ -11,8 +11,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include <webgpu/webgpu.hpp>
 
 #include "buffer.hpp"

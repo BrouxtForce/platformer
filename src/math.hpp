@@ -149,6 +149,16 @@ namespace Math
         return b;
     }
 
+    template<typename T>
+    inline T Abs(T value)
+    {
+        if (value < 0)
+        {
+            return -value;
+        }
+        return value;
+    }
+
     constexpr double PI = M_PI;
     constexpr double RAD_TO_DEG = 180.0 / PI;
     constexpr double DEG_TO_RAD = PI / 180.0;

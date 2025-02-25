@@ -48,26 +48,27 @@ String ReadFile(StringView filepath, MemoryArena* arena)
     return out;
 }
 
-std::vector<uint8_t> ReadFileBuffer(StringView filepath)
+Array<uint8_t> ReadFileBuffer(StringView filepath, MemoryArena* arena)
 {
     StringView fullPath = GetFullPath(filepath, &TransientArena);
 
-    std::vector<uint8_t> dataVector;
+    Array<uint8_t> out;
+    out.arena = arena;
 
     size_t dataSize = 0;
     void* data = SDL_LoadFile(fullPath.data, &dataSize);
     if (data == nullptr)
     {
-        return dataVector;
+        return out;
     }
     Log::Debug("Read '%' (% bytes)", filepath, dataSize);
 
-    dataVector.resize(dataSize);
-    SDL_memcpy(dataVector.data(), data, dataSize);
+    out.Resize(dataSize);
+    memcpy(out.data, data, dataSize);
 
     SDL_free(data);
 
-    return dataVector;
+    return out;
 }
 
 void WriteFile(StringView filepath, StringView data)

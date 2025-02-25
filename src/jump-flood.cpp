@@ -1,5 +1,6 @@
 #include "jump-flood.hpp"
 #include "shader-library.hpp"
+#include "application.hpp"
 
 JumpFlood::~JumpFlood()
 {
@@ -154,9 +155,13 @@ void JumpFlood::InitTextures()
     });
     for (int i = 0; i < (int)m_PingPongTextureViews.size(); i++)
     {
+        String label;
+        label.arena = &TransientArena;
+        label << "Jump Flood Slice View " << i << '\0';
+
         m_PingPongTextureViews[i] = m_PingPongTexture.createView(WGPUTextureViewDescriptor {
             .nextInChain = nullptr,
-            .label = ("Jump Flood Slice View " + std::to_string(i)).c_str(),
+            .label = label.data,
             .format = m_TextureFormat,
             .dimension = wgpu::TextureViewDimension::_2D,
             .baseMipLevel = 0,

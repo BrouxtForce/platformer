@@ -75,7 +75,6 @@ std::optional<T> GetUniform(const Entity* entity, StringView name)
 {
     if (!entity->shader)
     {
-        __builtin_debugtrap();
         Log::Error("Shader is nullptr");
         return std::nullopt;
     }

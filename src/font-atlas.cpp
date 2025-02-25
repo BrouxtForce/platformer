@@ -3,6 +3,16 @@
 #include <SDL3/SDL.h>
 #include <cmath>
 
+#include "memory-arena.hpp"
+#include "application.hpp"
+
+// Since ImGui uses STBTT and provides no way to pass in an arena, the arena will be nullptr when ImGui initializes its font atlas
+// Defining STBTT_malloc to use an arena means that I will not have to bother with freeing each malloc'd pointer individually
+// TODO: ImGui is not included in Release, so this ternary expression can be stripped out of such builds
+
+#define STBTT_malloc(bytes, arena) (((MemoryArena*)(arena ? arena : &GlobalArena))->Alloc((bytes), alignof(std::max_align_t)))
+#define STBTT_free(ptr, arena) ((void)(ptr), (void)(arena))
+
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_rect_pack.h>
@@ -124,18 +134,19 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
 
     m_QuadBindGroup = renderer.m_Device.createBindGroup(bindGroupDescriptor);
 
-    std::vector<WGPUBindGroupLayout> packedBindGroupLayouts;
-    packedBindGroupLayouts.reserve(renderer.m_BindGroupLayouts.size() + 1);
+    Array<WGPUBindGroupLayout> packedBindGroupLayouts;
+    packedBindGroupLayouts.arena = &TransientArena;
+    packedBindGroupLayouts.Reserve(renderer.m_BindGroupLayouts.size() + 1);
     for (WGPUBindGroupLayout layout : renderer.m_BindGroupLayouts)
     {
-        packedBindGroupLayouts.push_back(layout);
+        packedBindGroupLayouts.Push(layout);
     }
-    packedBindGroupLayouts.push_back(bindGroupLayout);
+    packedBindGroupLayouts.Push(bindGroupLayout);
 
     wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor = wgpu::Default;
-    pipelineLayoutDescriptor.bindGroupLayouts = packedBindGroupLayouts.data();
-    pipelineLayoutDescriptor.bindGroupLayoutCount = packedBindGroupLayouts.size();
-    m_QuadBindGroupIndex = packedBindGroupLayouts.size() - 1;
+    pipelineLayoutDescriptor.bindGroupLayouts = packedBindGroupLayouts.data;
+    pipelineLayoutDescriptor.bindGroupLayoutCount = packedBindGroupLayouts.size;
+    m_QuadBindGroupIndex = packedBindGroupLayouts.size - 1;
 
     wgpu::PipelineLayout pipelineLayout = renderer.m_Device.createPipelineLayout(pipelineLayoutDescriptor);
 
@@ -193,10 +204,11 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
 {
     m_FontSize = fontSize;
 
-    std::vector<uint8_t> fontBuffer = ReadFileBuffer(path);
+    Span<uint8_t> fontBuffer = ReadFileBuffer(path, &TransientArena);
 
     stbtt_fontinfo info;
-    if (!stbtt_InitFont(&info, fontBuffer.data(), 0))
+    info.userdata = &TransientArena;
+    if (!stbtt_InitFont(&info, fontBuffer.data, 0))
     {
         Log::Error("Failed to initialize font data");
         return false;
@@ -204,14 +216,18 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
 
     float scale = stbtt_ScaleForPixelHeight(&info, fontSize);
 
-    using stb_data_ptr = std::unique_ptr<uint8_t, std::function<void(uint8_t*)>>;
-
     Charset copyCharset = charset;
     copyCharset.Insert(s_DefaultChar);
     const int charsetSize = copyCharset.size();
 
-    std::vector<stbrp_rect> rects(charsetSize);
-    std::vector<stb_data_ptr> sdfs(charsetSize);
+    Array<stbrp_rect> rects;
+    rects.arena = &TransientArena;
+    rects.Resize(charsetSize);
+
+    Array<uint8_t*> sdfs;
+    sdfs.arena = &TransientArena;
+    sdfs.Resize(charsetSize);
+
     for (int i = 0; i < charsetSize; i++)
     {
         const char c = copyCharset.PopChar();
@@ -233,26 +249,32 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
         };
         m_GlyphMap.insert({ c, glyph });
 
-        sdfs[i] = stb_data_ptr(data, [](uint8_t* data) { STBTT_free(data, nullptr); });
+        sdfs[i] = data;
     }
 
     stbrp_context rectPackContext;
-    std::vector<stbrp_node> nodes(m_Width);
-    stbrp_init_target(&rectPackContext, m_Width, m_Height, nodes.data(), nodes.size());
-    stbrp_pack_rects(&rectPackContext, rects.data(), rects.size());
+
+    Array<stbrp_node> nodes;
+    nodes.arena = &TransientArena;
+    nodes.Resize(m_Width);
+
+    stbrp_init_target(&rectPackContext, m_Width, m_Height, nodes.data, nodes.size);
+    stbrp_pack_rects(&rectPackContext, rects.data, rects.size);
 
     Math::float2 textureSize { (float)m_Width, (float)m_Height };
 
     copyCharset = charset;
     copyCharset.Insert(s_DefaultChar);
 
-    std::vector<uint8_t> bitmap(m_Width * m_Height);
+    Array<uint8_t> bitmap;
+    bitmap.arena = &TransientArena;
+    bitmap.Resize(m_Width * m_Height);
     for (int i = 0; i < charsetSize; i++)
     {
         const char c = copyCharset.PopChar();
 
         const stbrp_rect& rect = rects[i];
-        const stb_data_ptr& sdf = sdfs[i];
+        const uint8_t* const sdf = sdfs[i];
 
         for (int x = 0; x < rect.w; x++)
         {
@@ -260,7 +282,7 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
             {
                 int bitmapIndex = (rect.x + x) + m_Width * (rect.y + y);
                 int sdfIndex = x + rect.w * y;
-                bitmap[bitmapIndex] = sdf.get()[sdfIndex];
+                bitmap[bitmapIndex] = sdf[sdfIndex];
             }
         }
 
@@ -283,8 +305,8 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
             .origin = wgpu::Origin3D{},
             .aspect = wgpu::TextureAspect::All
         },
-        bitmap.data(),
-        bitmap.size(),
+        bitmap.data,
+        bitmap.size,
         WGPUTextureDataLayout {
             .offset = 0,
             .bytesPerRow = (uint32_t)(m_Width * sizeof(uint8_t)),
@@ -322,8 +344,9 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
         Math::float2 texScale;
     };
 
-    std::vector<GlyphQuad> quads;
-    quads.reserve(text.size);
+    Array<GlyphQuad> quads;
+    quads.arena = &TransientArena;
+    quads.Reserve(text.size);
 
     float scale = size / m_FontSize;
 
@@ -346,7 +369,7 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
             glyphPosition.y *= -aspect;
             glyphScale.y *= -aspect;
 
-            quads.push_back({
+            quads.Push({
                 .position = glyphPosition + position,
                 .scale = glyphScale,
                 .texPosition = glyph.texPosition,
@@ -356,9 +379,9 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
 
         currentPoint += scale * glyph.advanceWidth;
     }
-    assert(quads.size() > 0);
+    assert(quads.size > 0);
 
-    size_t writeSize = quads.size() * sizeof(GlyphQuad);
+    size_t writeSize = quads.size * sizeof(GlyphQuad);
     if (m_QuadsWritten * sizeof(GlyphQuad) + writeSize > s_QuadBufferSize)
     {
         // Not enough space in m_QuadBuffer
@@ -367,13 +390,13 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
         return;
     }
     size_t offset = m_QuadsWritten * sizeof(GlyphQuad);
-    queue.writeBuffer(m_QuadBuffer.get(), offset, quads.data(), writeSize);
+    queue.writeBuffer(m_QuadBuffer.get(), offset, quads.data, writeSize);
 
     renderEncoder.setPipeline(m_RenderPipeline);
     renderEncoder.setBindGroup(m_QuadBindGroupIndex, m_QuadBindGroup, 0, nullptr);
-    renderEncoder.draw(4, quads.size(), 0, m_QuadsWritten);
+    renderEncoder.draw(4, quads.size, 0, m_QuadsWritten);
 
-    m_QuadsWritten += quads.size();
+    m_QuadsWritten += quads.size;
 }
 
 float FontAtlas::GetTextWidth(StringView text) const
@@ -407,10 +430,10 @@ float FontAtlas::GetTextHeight(StringView text) const
     for (int i = 0; i < (int)text.size; i++)
     {
         const Glyph& glyph = GetGlyph(text[i]);
-        top    = std::min(glyph.offset.y, top);
-        bottom = std::max(glyph.offset.y + glyph.size.y, bottom);
+        top    = Math::Min(glyph.offset.y, top);
+        bottom = Math::Max(glyph.offset.y + glyph.size.y, bottom);
     }
-    return std::abs(top - bottom);
+    return Math::Abs(top - bottom);
 }
 
 const FontAtlas::Glyph& FontAtlas::GetGlyph(char c) const

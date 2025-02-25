@@ -3,6 +3,7 @@
 #include "math.hpp"
 #include "log.hpp"
 #include "shader-library.hpp"
+#include "application.hpp"
 
 Lighting::~Lighting()
 {
@@ -142,9 +143,13 @@ void Lighting::InitTextures()
     });
     for (int i = 0; i < s_NumCascades; i++)
     {
+        String label;
+        label.arena = &TransientArena;
+        label << "Cascade Texture Slice View " << i << '\0';
+
         m_CascadeTextureSliceViews[i] = m_CascadeTexture.createView(WGPUTextureViewDescriptor {
             .nextInChain = nullptr,
-            .label = ("Cascade Texture Slice View " + std::to_string(i)).c_str(),
+            .label = label.data,
             .format = s_CascadeTextureFormat,
             .dimension = wgpu::TextureViewDimension::_2D,
             .baseMipLevel = 0,

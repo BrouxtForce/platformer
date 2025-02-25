@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
 #include "data-structures.hpp"
 
 String ReadFile(StringView filepath, MemoryArena* arena);
-std::vector<uint8_t> ReadFileBuffer(StringView filepath);
+Array<uint8_t> ReadFileBuffer(StringView filepath, MemoryArena* arena);
 
 void WriteFile(StringView filepath, StringView data);
 
