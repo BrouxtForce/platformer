@@ -11,6 +11,26 @@
 #include "math.hpp"
 
 template<typename T>
+struct PointerIterator
+{
+    T* ptr = nullptr;
+
+    constexpr T& operator*() const
+    {
+        return *ptr;
+    }
+    constexpr T& operator++()
+    {
+        ptr++;
+        return *ptr;
+    }
+    constexpr bool operator==(PointerIterator<T> other)
+    {
+        return ptr == other.ptr;
+    };
+};
+
+template<typename T>
 struct Array
 {
     static_assert(std::is_trivially_destructible_v<T>);
@@ -78,29 +98,19 @@ struct Array
         return data[index];
     }
 
-    struct Iterator
-    {
-        T* ptr = nullptr;
-
-        inline T& operator*() const
-        {
-            return *ptr;
-        }
-        inline T& operator++()
-        {
-            ptr++;
-            return *ptr;
-        }
-        inline bool operator==(Iterator other)
-        {
-            return ptr == other.ptr;
-        };
-    };
-    Iterator begin()
+    PointerIterator<T> begin()
     {
         return { .ptr = data };
     }
-    Iterator end()
+    PointerIterator<T> end()
+    {
+        return { .ptr = data + size };
+    }
+    PointerIterator<const T> begin() const
+    {
+        return { .ptr = data };
+    }
+    PointerIterator<const T> end() const
     {
         return { .ptr = data + size };
     }
@@ -123,7 +133,7 @@ struct Span
     constexpr Span(T* data, size_t size)
         : data(data), size(size) {}
 
-    Span<T> Slice(size_t start, size_t length = SIZE_MAX) const
+    inline Span<T> Slice(size_t start, size_t length = SIZE_MAX) const
     {
         return {
             data + start,
@@ -131,13 +141,13 @@ struct Span
         };
     }
 
-    T& operator[](size_t index) const
+    inline T& operator[](size_t index) const
     {
         assert(index >= 0 && index < size);
         return data[index];
     }
 
-    bool operator==(const Span<T>& other) const
+    inline bool operator==(const Span<T>& other) const
     {
         if (size != other.size)
         {
@@ -146,11 +156,11 @@ struct Span
         return memcmp(data, other.data, size) == 0;
     }
 
-    Array<T>::Iterator begin()
+    constexpr PointerIterator<T> begin() const
     {
         return { .ptr = data };
     }
-    Array<T>::Iterator end()
+    constexpr PointerIterator<T> end() const
     {
         return { .ptr = data + size };
     }
@@ -396,6 +406,15 @@ struct StringView
     bool operator!=(StringView str) const;
 
     const char& operator[](size_t index) const;
+
+    constexpr PointerIterator<const char> begin() const
+    {
+        return { .ptr = data };
+    }
+    constexpr PointerIterator<const char> end() const
+    {
+        return { .ptr = data + size };
+    }
 };
 
 // TODO: Remove reliance on std::string_view

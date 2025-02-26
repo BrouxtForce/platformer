@@ -13,10 +13,9 @@ class Renderer;
 class Charset
 {
 public:
-    // TODO: Change to StringView
-    inline constexpr Charset(std::string_view str)
+    inline constexpr Charset(StringView str)
     {
-        for (char c : str)
+        for (const char& c : str)
         {
             Insert(c);
         }
