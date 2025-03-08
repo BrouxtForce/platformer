@@ -7,6 +7,8 @@
 #include <cstdio>
 #endif
 
+#include "utility.hpp"
+
 namespace Log
 {
     static MemoryArena s_Arena;
@@ -53,6 +55,7 @@ namespace Log
         {
             return;
         }
+
         String out;
         out.arena = GetArena();
 #if __EMSCRIPTEN__
@@ -77,6 +80,7 @@ namespace Log
         {
             return;
         }
+
         String out;
         out.arena = GetArena();
 #if __EMSCRIPTEN__
@@ -96,6 +100,7 @@ namespace Log
         {
             return;
         }
+
         String out;
         out.arena = GetArena();
 #if __EMSCRIPTEN__
@@ -111,6 +116,8 @@ namespace Log
 
     void Error(StringView message)
     {
+        Breakpoint();
+
         if (s_LogLevel > LogLevel::Error)
         {
             return;

@@ -5,6 +5,11 @@
 #include "log.hpp"
 #include "application.hpp"
 
+#if __APPLE__
+    #include <unistd.h>
+    #include <sys/sysctl.h>
+#endif
+
 StringView GetBasePath()
 {
     static String basePath;
@@ -147,3 +152,43 @@ bool CharacterInputStream::Eof() const
 {
     return position >= input.size;
 }
+
+#if DEBUG
+    static bool BeingDebugged()
+    {
+    #if __APPLE__
+        // https://stackoverflow.com/questions/2200277/detecting-debugger-on-mac-os-x
+
+        int junk = 0;
+        int mib[4] {};
+        kinfo_proc info{};
+        size_t size = 0;
+
+        info.kp_proc.p_flag = 0;
+
+        mib[0] = CTL_KERN;
+        mib[1] = KERN_PROC;
+        mib[2] = KERN_PROC_PID;
+        mib[3] = getpid();
+
+        size = sizeof(info);
+        junk = sysctl(mib, sizeof(mib) / sizeof(*mib), &info, &size, NULL, 0);
+        assert(junk == 0);
+
+        return info.kp_proc.p_flag & P_TRACED;
+    #endif
+        return false;
+    }
+
+    void Breakpoint()
+    {
+        if (!BeingDebugged())
+        {
+            return;
+        }
+
+    #if __has_builtin(__builtin_debugtrap)
+        __builtin_debugtrap();
+    #endif
+    }
+#endif

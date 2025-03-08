@@ -21,3 +21,9 @@ struct CharacterInputStream
     char Next();
     bool Eof() const;
 };
+
+#if DEBUG
+void Breakpoint();
+#else
+constexpr void Breakpoint() {}
+#endif
