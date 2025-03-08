@@ -128,6 +128,18 @@ namespace Math
         return float3(x / other.x, y / other.y, z / other.z);
     }
 
+    float& float3::operator[](int index)
+    {
+        switch (index)
+        {
+            case 0: return x;
+            case 1: return y;
+            case 2: return z;
+        }
+        assert(false);
+        return x;
+    }
+
     Complex::Complex(float a, float b)
         : a(a), b(b) {}
 

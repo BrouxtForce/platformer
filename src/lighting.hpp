@@ -13,7 +13,6 @@
 
 #include <webgpu/webgpu.hpp>
 
-#include "buffer.hpp"
 #include "jump-flood.hpp"
 
 class Shader;
@@ -56,7 +55,7 @@ private:
 
     wgpu::Sampler m_Sampler;
 
-    Buffer m_CascadeUniformBuffer;
+    wgpu::Buffer m_CascadeUniformBuffer;
 
     struct UniformData
     {

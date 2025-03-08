@@ -47,6 +47,12 @@ TEST_CASE("String")
         CHECK(string == "ac");
 
         CHECK(arena.offset == 2);
+
+        string.NullTerminate();
+        CHECK(string == "ac");
+
+        string.NullTerminate();
+        CHECK(string == "ac");
     }
 
     SUBCASE("Appending")

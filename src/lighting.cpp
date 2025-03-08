@@ -74,14 +74,15 @@ void Lighting::Render(wgpu::Queue& queue, wgpu::CommandEncoder& commandEncoder, 
     float intervalStart = 0.0f;
     for (int i = 0; i < s_NumCascades; i++)
     {
-        m_CascadeUniformBuffer.Write(queue, UniformData {
+        UniformData uniformData {
             .intervalLength = intervalLength,
             .intervalStart = intervalStart,
             .probeSize = probeSize,
             .cascadeCount = s_NumCascades,
             .textureSizeX = m_Width,
             .textureSizeY = m_Height
-        }, i * sizeof(UniformData));
+        };
+        queue.writeBuffer(m_CascadeUniformBuffer, i * sizeof(UniformData), &uniformData, sizeof(UniformData));
         probeSize *= 2;
         intervalStart += intervalLength;
         intervalLength *= 4.0f;
@@ -200,11 +201,13 @@ void Lighting::InitSamplers()
 
 void Lighting::InitBuffers()
 {
-    m_CascadeUniformBuffer = Buffer(
-        m_Device,
-        sizeof(UniformData) * s_NumCascades,
-        wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Storage
-    );
+    m_CascadeUniformBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
+        .nextInChain = nullptr,
+        .label = "Cascade Uniform Buffer",
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Storage,
+        .size = sizeof(UniformData) * s_NumCascades,
+        .mappedAtCreation = false
+    });
 }
 
 void Lighting::InitBindGroupLayouts()
@@ -311,9 +314,9 @@ void Lighting::InitBindGroups()
         WGPUBindGroupEntry bindGroupEntry {
             .nextInChain = nullptr,
             .binding = 0,
-            .buffer = m_CascadeUniformBuffer.get(),
+            .buffer = m_CascadeUniformBuffer,
             .offset = 0,
-            .size = m_CascadeUniformBuffer.Size(),
+            .size = m_CascadeUniformBuffer.getSize(),
             .sampler = nullptr,
             .textureView = nullptr
         };

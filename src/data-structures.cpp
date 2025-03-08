@@ -5,6 +5,8 @@
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb/stb_sprintf.h>
 
+#include "log.hpp"
+
 void String::Append(StringView str)
 {
     Reserve(size + str.size);
@@ -83,13 +85,34 @@ void String::Append(double num)
     size += appendedSize;
 }
 
+void String::Append(Math::float2 vec)
+{
+    Append('(');
+    Append(vec.x);
+    Append(", ");
+    Append(vec.y);
+    Append(')');
+}
+
+void String::Append(Math::float3 vec)
+{
+    Append('(');
+    Append(vec.x);
+    Append(", ");
+    Append(vec.y);
+    Append(", ");
+    Append(vec.z);
+    Append(')');
+}
+
 void String::NullTerminate()
 {
-    if (data[size - 1] == '\0')
+    if (capacity > size && data[size] == '\0')
     {
         return;
     }
     Append('\0');
+    size--;
 }
 
 void String::ReplaceAll(char oldValue, char newValue)
@@ -109,6 +132,7 @@ void String::Clear()
     size = 0;
 }
 
+// TODO: Special handling in the case of null termination; The size of a string includes the null terminator
 bool String::Equals(StringView str) const
 {
     if (size != str.size)
@@ -183,6 +207,20 @@ bool StringView::Equals(StringView str) const
     return memcmp(data, str.data, size) == 0;
 }
 
+bool StringView::StartsWith(StringView prefix) const
+{
+    if (prefix.size > size) return false;
+
+    for (size_t i = 0; i < prefix.size; i++)
+    {
+        if (data[i] != prefix[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool StringView::EndsWith(StringView suffix) const
 {
     if (suffix.size > size) return false;
@@ -195,6 +233,61 @@ bool StringView::EndsWith(StringView suffix) const
         }
     }
     return true;
+}
+
+size_t StringView::Find(char c, size_t start) const
+{
+    for (size_t i = start; i < size; i++)
+    {
+        if (data[i] == c)
+        {
+            return i;
+        }
+    }
+    return String::NPOS;
+}
+
+// TODO: Use std::from_chars
+int StringView::ToInt()
+{
+    constexpr size_t BUFFER_SIZE = 100;
+    std::array<char, BUFFER_SIZE> buffer;
+    assert(buffer.size() > size);
+
+    memcpy(buffer.data(), data, size);
+    buffer[size] = '\0';
+
+    char* endptr = nullptr;
+    int result = std::strtol(buffer.data(), &endptr, 10);
+
+    // TODO: Is this ever not the case?
+    static_assert(sizeof(long) >= sizeof(int));
+
+    if (*endptr != '\0' || std::isspace(buffer[0]))
+    {
+        Log::Warn("ToInt('%') is invalid", *this);
+    }
+    return result;
+}
+
+// TODO: Use std::from_chars
+float StringView::ToFloat()
+{
+    constexpr size_t BUFFER_SIZE = 100;
+    std::array<char, BUFFER_SIZE> buffer;
+    assert(buffer.size() > size);
+
+    memcpy(buffer.data(), data, size);
+    buffer[size] = '\0';
+
+    char* endptr = nullptr;
+    float result = std::strtof(buffer.data(), &endptr);
+
+    if (*endptr != '\0' || std::isspace(buffer[0]))
+    {
+        Log::Warn("ToInt('%') is invalid", *this);
+    }
+    return result;
 }
 
 bool StringView::operator==(StringView str) const

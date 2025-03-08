@@ -5,7 +5,6 @@
 #include <webgpu/webgpu.hpp>
 
 #include "math.hpp"
-#include "buffer.hpp"
 #include "data-structures.hpp"
 
 class Renderer;
@@ -69,7 +68,7 @@ private:
     // TODO: Dynamic buffer resizing?
     static constexpr size_t s_QuadBufferSize = 16384;
     size_t m_QuadsWritten = 0;
-    Buffer m_QuadBuffer;
+    wgpu::Buffer m_QuadBuffer;
     wgpu::BindGroup m_QuadBindGroup;
     int m_QuadBindGroupIndex = 0;
 

@@ -82,7 +82,13 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     samplerDescriptor.maxAnisotropy = 1.0f;
     m_Sampler = renderer.m_Device.createSampler(samplerDescriptor);
 
-    m_QuadBuffer = Buffer(renderer.m_Device, s_QuadBufferSize, wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst);
+    m_QuadBuffer = renderer.m_Device.createBuffer(WGPUBufferDescriptor {
+        .nextInChain = nullptr,
+        .label = nullptr,
+        .usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst,
+        .size = s_QuadBufferSize,
+        .mappedAtCreation = false
+    });
 
     std::array<WGPUBindGroupLayoutEntry, 3> bindGroupLayoutEntries {
         WGPUBindGroupLayoutEntry {
@@ -113,7 +119,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     std::array<WGPUBindGroupEntry, 3> bindGroupEntries {
         WGPUBindGroupEntry {
             .binding = 0,
-            .buffer = m_QuadBuffer.get(),
+            .buffer = m_QuadBuffer,
             .offset = 0,
             .size = s_QuadBufferSize
         },
@@ -390,7 +396,7 @@ void FontAtlas::RenderText(wgpu::Queue queue, wgpu::RenderPassEncoder renderEnco
         return;
     }
     size_t offset = m_QuadsWritten * sizeof(GlyphQuad);
-    queue.writeBuffer(m_QuadBuffer.get(), offset, quads.data, writeSize);
+    queue.writeBuffer(m_QuadBuffer, offset, quads.data, writeSize);
 
     renderEncoder.setPipeline(m_RenderPipeline);
     renderEncoder.setBindGroup(m_QuadBindGroupIndex, m_QuadBindGroup, 0, nullptr);

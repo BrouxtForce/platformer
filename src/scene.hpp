@@ -7,15 +7,7 @@
 #include "transform.hpp"
 #include "data-structures.hpp"
 
-class Shader;
-struct Material
-{
-    static constexpr size_t SIZE = 64;
-    std::array<uint32_t, SIZE / 4> data;
-
-    void WriteColor(Math::Color color);
-};
-static_assert(sizeof(Material) == Material::SIZE);
+struct Material;
 
 enum class Shape
 {
@@ -47,13 +39,12 @@ struct GravityZone
 
 struct Entity
 {
-    StringView name;
+    String name;
     uint16_t id = 1;
     uint16_t flags = 0;
     uint16_t zIndex = 0;
     Transform transform{};
-    Material material{};
-    const Shader* shader = nullptr;
+    Material* material = nullptr;
     Shape shape = Shape::Rectangle;
     GravityZone gravityZone{};
 };

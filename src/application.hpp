@@ -47,7 +47,7 @@ private:
     static constexpr int WINDOW_WIDTH = 640;
     static constexpr int WINDOW_HEIGHT = 480;
 
-    static constexpr StringView firstSceneFilepath = "assets/scenes/castle.txt";
+    static constexpr StringView firstSceneFilepath = "assets/scenes/castle.toml";
 
     SDL_Window* m_Window = nullptr;
     Renderer m_Renderer;

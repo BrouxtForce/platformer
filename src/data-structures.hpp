@@ -334,6 +334,9 @@ struct String : Array<char>
 
     void Append(double num);
 
+    void Append(Math::float2 vec);
+    void Append(Math::float3 vec);
+
     void NullTerminate();
 
     void ReplaceAll(char oldValue, char newValue);
@@ -400,7 +403,13 @@ struct StringView
     StringView Substr(size_t position, size_t length = String::NPOS) const;
 
     bool Equals(StringView str) const;
+    bool StartsWith(StringView prefix) const;
     bool EndsWith(StringView suffix) const;
+
+    size_t Find(char c, size_t start) const;
+
+    int ToInt();
+    float ToFloat();
 
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;

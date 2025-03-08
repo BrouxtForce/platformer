@@ -68,6 +68,8 @@ namespace Math
         float3 operator-(const float3& other) const;
         float3 operator*(const float3& other) const;
         float3 operator/(const float3& other) const;
+
+        float& operator[](int index);
     };
 
     using float4 = std::array<float, 4>;
@@ -97,6 +99,9 @@ namespace Math
 
         inline Color(float r, float g, float b, float a = 1.0f)
             : r(r), g(g), b(b), a(a) {}
+
+        inline Color(float4 vector)
+            : r(vector[0]), g(vector[1]), b(vector[2]), a(vector[3]) {}
     };
 
     struct Matrix3x3
@@ -163,4 +168,45 @@ namespace Math
     constexpr double RAD_TO_DEG = 180.0 / PI;
     constexpr double DEG_TO_RAD = PI / 180.0;
     constexpr double SQRT_2 = M_SQRT2;
+
+    template<typename T>
+    struct Traits {};
+
+    template<>
+    struct Traits<Math::float2>
+    {
+        using ScalarType = float;
+        static constexpr int Count = 2;
+    };
+    template<>
+    struct Traits<Math::float3>
+    {
+        using ScalarType = float;
+        static constexpr int Count = 3;
+    };
+    template<>
+    struct Traits<Math::float4>
+    {
+        using ScalarType = float;
+        static constexpr int Count = 4;
+    };
+
+    template<>
+    struct Traits<Math::int2>
+    {
+        using ScalarType = int32_t;
+        static constexpr int Count = 2;
+    };
+    template<>
+    struct Traits<Math::int3>
+    {
+        using ScalarType = int32_t;
+        static constexpr int Count = 3;
+    };
+    template<>
+    struct Traits<Math::int4>
+    {
+        using ScalarType = int32_t;
+        static constexpr int Count = 4;
+    };
 }

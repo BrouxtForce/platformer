@@ -7,6 +7,7 @@
 
 #include "log.hpp"
 #include "utility.hpp"
+#include "material.hpp"
 
 MemoryArena GlobalArena;
 MemoryArena TransientArena;
@@ -101,7 +102,7 @@ void Application::LoadScene(StringView sceneFilepath)
     m_Scene.Deserialize(ReadFile(sceneFilepath, &TransientArena));
 
     Entity* playerEntity = m_Scene.CreateEntity();
-    playerEntity->material.WriteColor({ 0.5f, 0.5f, 0.5f });
+    playerEntity->material = MaterialManager::GetMaterial("player");
     playerEntity->transform.position = Math::float2(0.0f, 0.0f);
     playerEntity->transform.scale = Math::float2(0.1);
     playerEntity->shape = Shape::Ellipse;
@@ -234,6 +235,16 @@ bool Application::LoopEditor(float deltaTime)
         // ImGui::InputText("Name:", &inspectedEntity->name);
 
         ImGui::Text("ID: %i", inspectedEntity->id);
+
+        char buffer[100] {};
+        memcpy(buffer, inspectedEntity->name.data, Math::Min(sizeof(buffer) - 1, inspectedEntity->name.size));
+        if (ImGui::InputText("Name", buffer, sizeof(buffer)))
+        {
+            // TODO: Make a proper String overload similar to imgui_stdlib
+            inspectedEntity->name.Clear();
+            inspectedEntity->name += buffer;
+        }
+
         ImGuiFlag("Flag: Collider",     inspectedEntity->flags, (uint16_t)EntityFlags::Collider);
         ImGuiFlag("Flag: Gravity Zone", inspectedEntity->flags, (uint16_t)EntityFlags::GravityZone);
         ImGuiFlag("Flag: Text",         inspectedEntity->flags, (uint16_t)EntityFlags::Text);
@@ -257,6 +268,22 @@ bool Application::LoopEditor(float deltaTime)
 
         // TODO: Material properties
         // ImGui::ColorEdit3("Color", (float*)&inspectedEntity->color);
+
+        String materialName = String::Copy(inspectedEntity->material->name, &TransientArena);
+        materialName.NullTerminate();
+        if (ImGui::BeginCombo("material", materialName.data))
+        {
+            Array<String> materialNames = MaterialManager::GetMaterialNames(&TransientArena);
+            for (String name : materialNames)
+            {
+                name.NullTerminate();
+                if (ImGui::Selectable(name.data, name == materialName))
+                {
+                    inspectedEntity->material = MaterialManager::GetMaterial(name);
+                }
+            }
+            ImGui::EndCombo();
+        }
 
         static constexpr std::array<const char*, 2> shapes {
             "Rectangle", "Ellipse"
@@ -332,8 +359,8 @@ bool Application::LoopMainMenu(float deltaTime)
 
     m_Menu.Begin(mousePosition, m_Input.IsMousePressed());
 
-    m_Menu.SetBackgroundColor({ 0.2, 0.2, 0.2 });
-    m_Menu.SetFillColor({ 0.5, 0.5, 0.5 });
+    m_Menu.SetTextMaterial("main_menu_text");
+    m_Menu.SetButtonMaterial("main_menu_button");
 
     const Math::float2 buttonSize = { 0.5f, 0.07f };
     const Math::float2 buttonPadding = { 0.0f, 0.05f };

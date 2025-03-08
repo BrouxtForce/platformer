@@ -20,8 +20,8 @@ add_executable(game
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 
     src/application.cpp
-    src/buffer.cpp
     src/camera.cpp
+    src/config.cpp
     src/data-structures.cpp
     src/font-atlas.cpp
     src/input.cpp
@@ -29,6 +29,7 @@ add_executable(game
     src/lighting.cpp
     src/log.cpp
     src/main.cpp
+    src/material.cpp
     src/math.cpp
     src/memory-arena.cpp
     src/menu.cpp

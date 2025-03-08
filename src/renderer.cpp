@@ -12,6 +12,7 @@
 #include "utility.hpp"
 #include "log.hpp"
 #include "application.hpp"
+#include "material.hpp"
 
 bool Renderer::Init(SDL_Window* window)
 {
@@ -36,6 +37,7 @@ bool Renderer::Init(SDL_Window* window)
     m_Queue = m_Device.getQueue();
 
     m_ShaderLibrary.Load(m_Device);
+    MaterialManager::Init(m_ShaderLibrary, m_Device);
 
     m_Format = m_Surface.getPreferredFormat(m_Adapter);
 
@@ -44,7 +46,8 @@ bool Renderer::Init(SDL_Window* window)
     bindGroupLayoutEntry.binding = 0;
     bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
     bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(Material);
+    // TODO: Does this have to be zero?
+    bindGroupLayoutEntry.buffer.minBindingSize = 0;
 
     wgpu::BindGroupLayoutDescriptor bindGroupLayoutDescriptor;
     bindGroupLayoutDescriptor.entryCount = 1;
@@ -98,25 +101,37 @@ bool Renderer::Init(SDL_Window* window)
         });
     }
 
-    m_CameraBuffer = Buffer(m_Device, sizeof(Math::Matrix3x3), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
-    m_TimeBuffer = Buffer(m_Device, sizeof(float), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+    m_CameraBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
+        .nextInChain = nullptr,
+        .label = nullptr,
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
+        .size = sizeof(Math::Matrix3x3),
+        .mappedAtCreation = false
+    });
+    m_TimeBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
+        .nextInChain = nullptr,
+        .label = nullptr,
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
+        .size = sizeof(float),
+        .mappedAtCreation = false
+    });
 
     std::array<WGPUBindGroupEntry, 2> cameraBindGroupEntries {
         WGPUBindGroupEntry {
             .nextInChain = nullptr,
             .binding = 0,
-            .buffer = m_CameraBuffer.get(),
+            .buffer = m_CameraBuffer,
             .offset = 0,
-            .size = m_CameraBuffer.Size(),
+            .size = m_CameraBuffer.getSize(),
             .sampler = nullptr,
             .textureView = nullptr
         },
         WGPUBindGroupEntry {
             .nextInChain = nullptr,
             .binding = 1,
-            .buffer = m_TimeBuffer.get(),
+            .buffer = m_TimeBuffer,
             .offset = 0,
-            .size = m_TimeBuffer.Size(),
+            .size = m_TimeBuffer.getSize(),
             .sampler = nullptr,
             .textureView = nullptr
         }
@@ -134,86 +149,6 @@ bool Renderer::Init(SDL_Window* window)
     pipelineLayoutDescriptor.bindGroupLayoutCount = m_BindGroupLayouts.size();
     pipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout*)m_BindGroupLayouts.data();
     m_PipelineLayout = m_Device.createPipelineLayout(pipelineLayoutDescriptor);
-
-    std::optional<WGPURenderPipeline> renderPipeline = CreateRenderPipeline("quad", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create quad render pipeline.");
-        return false;
-    }
-    m_QuadRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("ellipse", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create ellipse render pipeline.");
-        return false;
-    }
-    m_EllipseRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("lava", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create lava render pipeline.");
-        return false;
-    }
-    m_LavaRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("gravity-zone", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create gravity zone render pipeline.");
-        return false;
-    }
-    m_GravityZoneRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("radial-gravity-zone", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create radial gravity zone render pipeline.");
-        return false;
-    }
-    m_RadialGravityZoneRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("checkpoint", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create checkpoint render pipeline.");
-        return false;
-    }
-    m_CheckpointRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("exit", true, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create exit render pipeline.");
-        return false;
-    }
-    m_ExitRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("quad", false, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create quad render pipeline.");
-        return false;
-    }
-    m_QuadLightRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("ellipse", false, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create ellipse render pipeline.");
-        return false;
-    }
-    m_EllipseLightRenderPipeline = renderPipeline.value();
-
-    renderPipeline = CreateRenderPipeline("lava", false, m_Format);
-    if (!renderPipeline.has_value())
-    {
-        Log::Error("Failed to create lava render pipeline.");
-        return false;
-    }
-    m_LavaLightRenderPipeline = renderPipeline.value();
 
     if (!m_Lighting.Init(m_Device, m_ShaderLibrary))
     {
@@ -327,13 +262,12 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     Math::Matrix3x3 viewMatrix = camera.GetMatrix();
-    m_CameraBuffer.Write(m_Queue, viewMatrix);
-    m_TimeBuffer.Write(m_Queue, m_Time);
+    m_Queue.writeBuffer(m_CameraBuffer, 0, &viewMatrix, sizeof(viewMatrix));
+    m_Queue.writeBuffer(m_TimeBuffer, 0, &m_Time, sizeof(m_Time));
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
     for (Entity& entity : scene.entities)
     {
-        UpdateEntity(&entity);
         if (!renderHiddenEntities && entity.flags & (uint16_t)EntityFlags::Hidden)
         {
             continue;
@@ -349,9 +283,16 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             .transform = entity.transform.GetMatrix(),
             .zIndex = entity.zIndex
         };
-        drawData.materialBuffer.Write(m_Queue, entity.material);
-        drawData.transformBuffer.Write(m_Queue, transformData);
-        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
+
+        assert(entity.material != nullptr);
+        if (entity.material->updated)
+        {
+            entity.material->Flush(m_Queue);
+            entity.material->updated = false;
+        }
+        m_Queue.writeBuffer(drawData.transformBuffer, 0, &transformData, sizeof(transformData));
+
+        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, entity.material->bindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
         if ((entity.flags & (uint16_t)EntityFlags::Text) != 0)
@@ -362,51 +303,7 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
             continue;
         }
 
-        if (entity.flags & (uint16_t)EntityFlags::Lava)
-        {
-            renderEncoder.setPipeline(m_LavaRenderPipeline);
-            renderEncoder.draw(4, 1, 0, 0);
-            continue;
-        }
-        if (entity.flags & (uint16_t)EntityFlags::Checkpoint)
-        {
-            renderEncoder.setPipeline(m_CheckpointRenderPipeline);
-            renderEncoder.draw(4, 1, 0, 0);
-            continue;
-        }
-        if (entity.flags & (uint16_t)EntityFlags::Exit)
-        {
-            renderEncoder.setPipeline(m_ExitRenderPipeline);
-            renderEncoder.draw(4, 1, 0, 0);
-            continue;
-        }
-
-        switch (entity.shape)
-        {
-            case Shape::Rectangle:
-                if (entity.flags & (uint16_t)EntityFlags::GravityZone)
-                {
-                    renderEncoder.setPipeline(m_GravityZoneRenderPipeline);
-                }
-                else
-                {
-                    renderEncoder.setPipeline(m_QuadRenderPipeline);
-                }
-                break;
-            case Shape::Ellipse:
-                if (entity.flags & (uint16_t)EntityFlags::GravityZone)
-                {
-                    renderEncoder.setPipeline(m_RadialGravityZoneRenderPipeline);
-                }
-                else
-                {
-                    renderEncoder.setPipeline(m_EllipseRenderPipeline);
-                }
-                break;
-            default:
-                assert(false);
-        }
-
+        renderEncoder.setPipeline(GetRenderPipeline(entity.material, m_Format, true));
         renderEncoder.draw(4, 1, 0, 0);
     }
     renderEncoder.end();
@@ -474,7 +371,7 @@ void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::Textur
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     Math::Matrix3x3 viewMatrix = camera.GetMatrix();
-    m_CameraBuffer.Write(m_Queue, viewMatrix);
+    m_Queue.writeBuffer(m_CameraBuffer, 0, &viewMatrix, sizeof(viewMatrix));
     renderEncoder.setBindGroup(2, m_CameraBindGroup, 0, nullptr);
 
     for (const Entity& entity : scene.entities)
@@ -494,29 +391,17 @@ void Renderer::RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::Textur
             .transform = entity.transform.GetMatrix(),
             .zIndex = entity.zIndex
         };
-        drawData.materialBuffer.Write(m_Queue, entity.material);
-        drawData.transformBuffer.Write(m_Queue, transformData);
-        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, drawData.materialBindGroup, 0, nullptr);
+        if (entity.material->updated)
+        {
+            entity.material->Flush(m_Queue);
+            entity.material->updated = false;
+        }
+        m_Queue.writeBuffer(drawData.transformBuffer, 0, &transformData, sizeof(transformData));
+
+        renderEncoder.setBindGroup(GROUP_MATERIAL_INDEX, entity.material->bindGroup, 0, nullptr);
         renderEncoder.setBindGroup(GROUP_TRANSFORM_INDEX, drawData.transformBindGroup, 0, nullptr);
 
-        if (entity.flags & (uint16_t)EntityFlags::Lava)
-        {
-            renderEncoder.setPipeline(m_LavaLightRenderPipeline);
-            renderEncoder.draw(4, 1, 0, 0);
-            continue;
-        }
-
-        switch (entity.shape)
-        {
-            case Shape::Rectangle:
-                renderEncoder.setPipeline(m_QuadLightRenderPipeline);
-                break;
-            case Shape::Ellipse:
-                renderEncoder.setPipeline(m_EllipseLightRenderPipeline);
-                break;
-            default:
-                assert(false);
-        }
+        renderEncoder.setPipeline(GetRenderPipeline(entity.material, m_Format, false));
 
         renderEncoder.draw(4, 1, 0, 0);
     }
@@ -682,6 +567,97 @@ void Renderer::ImGuiDebugTextures()
 #endif
 }
 
+wgpu::RenderPipeline Renderer::GetRenderPipeline(Material* material, wgpu::TextureFormat textureFormat, bool depthStencil)
+{
+    const Shader* shader = material->shader;
+    auto& renderPipelineMap = depthStencil ? m_RenderPipelineMap : m_LightRenderPipelineMap;
+
+    auto it = renderPipelineMap.find(shader);
+    if (it != renderPipelineMap.end())
+    {
+        return it->second;
+    }
+
+    String vertexEntry = String::Copy(material->shader->name, &TransientArena) << "_vert";
+    vertexEntry.NullTerminate();
+    vertexEntry.ReplaceAll('-', '_');
+
+    String fragmentEntry = String::Copy(material->shader->name, &TransientArena) << "_frag";
+    fragmentEntry.NullTerminate();
+    fragmentEntry.ReplaceAll('-', '_');
+
+    WGPUColorTargetState colorTarget {
+        .nextInChain = nullptr,
+        .format = textureFormat,
+        .blend = nullptr,
+        .writeMask = wgpu::ColorWriteMask::All
+    };
+
+    WGPUFragmentState fragmentState {
+        .nextInChain = nullptr,
+        .module = shader->shaderModule,
+        .entryPoint = fragmentEntry.data,
+        .constantCount = 0,
+        .constants = nullptr,
+        .targetCount = 1,
+        .targets = &colorTarget
+    };
+
+    WGPUDepthStencilState depthStencilState {
+        .nextInChain = nullptr,
+        .format = s_DepthStencilFormat,
+        .depthWriteEnabled = true,
+        .depthCompare = wgpu::CompareFunction::Greater,
+        .stencilFront = {},
+        .stencilBack = {},
+        .stencilReadMask = 0,
+        .stencilWriteMask = 0,
+        .depthBias = 0,
+        .depthBiasSlopeScale = 0.0f,
+        .depthBiasClamp = 0.0f
+    };
+
+    WGPURenderPipelineDescriptor pipelineDescriptor {
+        .nextInChain = nullptr,
+        // TODO: Label?
+        .label = nullptr,
+        .layout = m_PipelineLayout,
+        .vertex = {
+            .nextInChain = nullptr,
+            .module = shader->shaderModule,
+            .entryPoint = vertexEntry.data,
+            .constantCount = 0,
+            .constants = nullptr,
+            .bufferCount = 0,
+            .buffers = nullptr
+        },
+        .primitive = {
+            .nextInChain = nullptr,
+            .topology = wgpu::PrimitiveTopology::TriangleStrip,
+            .stripIndexFormat = wgpu::IndexFormat::Undefined,
+            .frontFace = wgpu::FrontFace::Undefined,
+            .cullMode = wgpu::CullMode::None
+        },
+        .depthStencil = &depthStencilState,
+        .multisample = {
+            .nextInChain = nullptr,
+            .count = 1,
+            .mask = ~(uint32_t)0,
+            .alphaToCoverageEnabled = false
+        },
+        .fragment = &fragmentState
+    };
+
+    if (!depthStencil)
+    {
+        pipelineDescriptor.depthStencil = nullptr;
+    }
+
+    wgpu::RenderPipeline renderPipeline = m_Device.createRenderPipeline(pipelineDescriptor);
+    renderPipelineMap.insert({ shader, renderPipeline });
+    return renderPipeline;
+}
+
 bool Renderer::LoadAdapterSync()
 {
     wgpu::RequestAdapterOptions options;
@@ -772,70 +748,24 @@ void Renderer::CreateDrawData(DrawData& drawData)
     assert(drawData.empty);
     drawData.empty = false;
 
-    drawData.materialBuffer = Buffer(m_Device, sizeof(Material), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
-    drawData.transformBuffer = Buffer(m_Device, sizeof(TransformBindGroupData), wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform);
+    drawData.transformBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
+        .nextInChain = nullptr,
+        .label = nullptr,
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
+        .size = sizeof(TransformBindGroupData),
+        .mappedAtCreation = false
+    });
 
     wgpu::BindGroupEntry binding;
     binding.binding = 0;
-    binding.buffer = drawData.materialBuffer.get();
+    binding.buffer = drawData.transformBuffer;
     binding.offset = 0;
-    binding.size = sizeof(Material);
+    binding.size = sizeof(TransformBindGroupData);
 
     wgpu::BindGroupDescriptor bindGroupDescriptor{};
-    bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_MATERIAL_INDEX];
+    bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
     bindGroupDescriptor.entryCount = 1;
     bindGroupDescriptor.entries = &binding;
 
-    drawData.materialBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
-
-    bindGroupDescriptor.layout = m_BindGroupLayouts[GROUP_TRANSFORM_INDEX];
-    binding.buffer = drawData.transformBuffer.get();
-    binding.size = sizeof(TransformBindGroupData);
-
     drawData.transformBindGroup = m_Device.createBindGroup(bindGroupDescriptor);
-}
-
-void Renderer::UpdateEntity(Entity* entity)
-{
-    StringView shaderName;
-    if (entity->flags & (uint16_t)EntityFlags::Text)
-    {
-        shaderName = "text";
-    }
-    else if (entity->flags & (uint16_t)EntityFlags::Checkpoint)
-    {
-        shaderName = "checkpoint";
-    }
-    else if (entity->flags & (uint16_t)EntityFlags::Exit)
-    {
-        shaderName = "exit";
-    }
-    else if (entity->shape == Shape::Rectangle)
-    {
-        if (entity->flags & (uint16_t)EntityFlags::GravityZone)
-        {
-            shaderName = "gravity-zone";
-        }
-        else
-        {
-            shaderName = "quad";
-        }
-    }
-    else if (entity->shape == Shape::Ellipse)
-    {
-        if (entity->flags & (uint16_t)EntityFlags::GravityZone)
-        {
-            shaderName = "radial-gravity-zone";
-        }
-        else
-        {
-            shaderName = "ellipse";
-        }
-    }
-    else
-    {
-        Log::Error("Could not find shader for entity");
-        return;
-    }
-    entity->shader = m_ShaderLibrary.GetShader(shaderName);
 }

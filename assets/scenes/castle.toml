@@ -1,0 +1,11 @@
+background_color = [0.000000, 0.000000, 0.000000, 0.000000]
+flags = 3
+
+[Ground_0]
+flags = 1
+z_index = 100
+position = [0.000000, -0.280000]
+scale = [1.000000, 0.100000]
+material = "castle_brick"
+shape = 0
+

@@ -5,26 +5,19 @@
 #include <webgpu/webgpu.hpp>
 
 #include "log.hpp"
-#include "scene.hpp"
-
-struct Material;
+#include "data-structures.hpp"
 
 class Shader
 {
 public:
+    StringView name;
     wgpu::ShaderModule shaderModule{};
 
-    Shader(wgpu::ShaderModule shaderModule, StringView source);
+    Shader(wgpu::ShaderModule shaderModule, StringView name, StringView source);
     ~Shader();
 
     Shader(const Shader&) = delete;
     Shader& operator=(const Shader&) = delete;
-
-    template<typename T>
-    void WriteUniform(Material& material, StringView name, T value) const;
-
-    template<typename T>
-    std::optional<T> GetUniform(const Material& material, StringView name) const;
 
     enum class DataType : uint8_t
     {
@@ -43,11 +36,23 @@ public:
         Count
     };
 
-private:
-    struct TokenInputStream;
+    static constexpr uint8_t s_DataTypeSize[(int)DataType::Count] {
+        [(int)DataType::Int32]  = 4,
+        [(int)DataType::Uint32] = 4,
+        [(int)DataType::Float]  = 4,
 
-    void GenerateReflectionInfo(StringView source);
-    void ParseMaterialStruct(TokenInputStream& stream);
+        [(int)DataType::Int2] = 8,
+        [(int)DataType::Int3] = 12,
+        [(int)DataType::Int4] = 16,
+
+        [(int)DataType::Uint2] = 8,
+        [(int)DataType::Uint3] = 12,
+        [(int)DataType::Uint4] = 16,
+
+        [(int)DataType::Float2] = 8,
+        [(int)DataType::Float3] = 12,
+        [(int)DataType::Float4] = 16
+    };
 
     struct UniformData
     {
@@ -56,30 +61,13 @@ private:
     };
 
     std::unordered_map<StringView, UniformData> m_UniformMap;
+
+private:
+    struct TokenInputStream;
+
+    void GenerateReflectionInfo(StringView source);
+    void ParseMaterialStruct(TokenInputStream& stream);
 };
-
-template<typename T>
-void WriteUniform(Entity* entity, StringView name, T value)
-{
-    if (!entity->shader)
-    {
-        Log::Error("Shader is nullptr");
-        return;
-    }
-    entity->shader->WriteUniform<T>(entity->material, name, value);
-}
-
-template<typename T>
-[[nodiscard]]
-std::optional<T> GetUniform(const Entity* entity, StringView name)
-{
-    if (!entity->shader)
-    {
-        Log::Error("Shader is nullptr");
-        return std::nullopt;
-    }
-    return entity->shader->GetUniform<T>(entity->material, name);
-}
 
 class ShaderLibrary
 {
@@ -99,7 +87,7 @@ private:
 
     std::unordered_map<StringView, std::unique_ptr<Shader>> m_ShaderModuleMap;
 
-    std::unique_ptr<Shader> LoadShader(wgpu::Device, StringView filepath);
+    std::unique_ptr<Shader> LoadShader(wgpu::Device, StringView filepath, StringView shaderName);
 
     String Preprocess(StringView source, MemoryArena* arena);
 };

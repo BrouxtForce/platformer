@@ -7,7 +7,6 @@
 #include <SDL3/SDL.h>
 
 #include "scene.hpp"
-#include "buffer.hpp"
 #include "camera.hpp"
 #include "font-atlas.hpp"
 #include "shader-library.hpp"
@@ -55,17 +54,10 @@ private:
 
     wgpu::TextureFormat m_Format = wgpu::TextureFormat::Undefined;
 
-    wgpu::RenderPipeline m_QuadRenderPipeline;
-    wgpu::RenderPipeline m_EllipseRenderPipeline;
-    wgpu::RenderPipeline m_LavaRenderPipeline;
-    wgpu::RenderPipeline m_GravityZoneRenderPipeline;
-    wgpu::RenderPipeline m_RadialGravityZoneRenderPipeline;
-    wgpu::RenderPipeline m_CheckpointRenderPipeline;
-    wgpu::RenderPipeline m_ExitRenderPipeline;
+    std::unordered_map<const Shader*, wgpu::RenderPipeline> m_RenderPipelineMap;
+    std::unordered_map<const Shader*, wgpu::RenderPipeline> m_LightRenderPipelineMap;
 
-    wgpu::RenderPipeline m_QuadLightRenderPipeline;
-    wgpu::RenderPipeline m_EllipseLightRenderPipeline;
-    wgpu::RenderPipeline m_LavaLightRenderPipeline;
+    wgpu::RenderPipeline GetRenderPipeline(Material* material, wgpu::TextureFormat textureFormat, bool depthStencil);
 
     std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
 
@@ -95,18 +87,15 @@ private:
     {
         bool empty = true;
 
-        Buffer materialBuffer;
-        wgpu::BindGroup materialBindGroup;
-
-        Buffer transformBuffer;
+        wgpu::Buffer transformBuffer;
         wgpu::BindGroup transformBindGroup;
     };
     std::unordered_map<uint32_t, DrawData> m_EntityDrawData;
 
     void CreateDrawData(DrawData& drawData);
 
-    Buffer m_CameraBuffer;
-    Buffer m_TimeBuffer;
+    wgpu::Buffer m_CameraBuffer;
+    wgpu::Buffer m_TimeBuffer;
     float m_Time = 0.0f;
     wgpu::BindGroup m_CameraBindGroup;
 
@@ -118,6 +107,4 @@ private:
     FontAtlas m_FontAtlas;
 
     friend class FontAtlas;
-
-    void UpdateEntity(Entity* entity);
 };

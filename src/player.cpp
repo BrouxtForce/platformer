@@ -129,6 +129,8 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
         gravityDirection = { 0.0f, -1.0f };
     }
 
+    // TODO: Fix
+    /*
     Physics::CollisionData checkpointCollision = Physics::EllipseCast(scene, prevTransform, m_Entity->transform.position - prevTransform.position, (uint16_t)EntityFlags::Checkpoint);
     if (checkpointCollision.collided && !GetUniform<uint32_t>(checkpointCollision.entity, "started").value_or(1))
     {
@@ -156,6 +158,7 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
             WriteUniform<float>(exitEntity, "start_time", currentTime);
         }
     }
+    */
 }
 
 void Player::Jump()

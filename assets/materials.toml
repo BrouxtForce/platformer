@@ -1,0 +1,47 @@
+[main_menu_button]
+color = [0.2, 0.2, 0.2]
+shader = "quad"
+
+[main_menu_text]
+color = [0.5, 0.5, 0.5]
+shader = "text"
+
+[castle_brick]
+color = [0.39, 0.14, 0]
+shader = "quad"
+
+[castle_lava]
+color = [0.91, 0.19, 0]
+shader = "lava"
+
+[castle_fake_lava]
+color = [0.91, 0.19, 0]
+shader = "quad"
+
+[castle_gravity_zone]
+color = [0.58, 0.03, 0.03]
+shader = "gravity-zone"
+
+[castle_radial_gravity_zone]
+color = [0.58, 0.03, 0.03]
+shader = "radial-gravity-zone"
+
+[castle_checkpoint]
+color = [0.16, 0, 0]
+start_time = 0
+started = 0
+shader = "checkpoint"
+
+[castle_exit]
+color = [0.4, 0.05, 0.05]
+start_time = 0
+started = 0
+shader = "exit"
+
+[castle_death_zone]
+color = [0, 0, 0]
+shader = "quad"
+
+[player]
+color = [0.5, 0.5, 0.5]
+shader = "ellipse"
