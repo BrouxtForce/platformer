@@ -12,7 +12,9 @@
 #include <emscripten.h>
 #endif
 
-SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
+static Application application;
+
+SDL_AppResult SDL_AppInit(void** /* state */, int argc, char** argv)
 {
     GameState startGameState = GameState::MainMenu_MainMenu;
     for (int i = 1; i < argc; i++)
@@ -30,17 +32,14 @@ SDL_AppResult SDL_AppInit(void** state, int argc, char** argv)
             startGameState = GameState::Editor;
         }
     }
-
-    Application* application = new Application();
-    *state = application;
-    if (application->Init(startGameState))
+    if (application.Init(startGameState))
     {
         return SDL_APP_CONTINUE;
     }
     return SDL_APP_FAILURE;
 }
 
-SDL_AppResult SDL_AppIterate(void* state)
+SDL_AppResult SDL_AppIterate(void* /* state */)
 {
 #if __EMSCRIPTEN__
     double thisFrameMs = emscripten_get_now();
@@ -54,18 +53,16 @@ SDL_AppResult SDL_AppIterate(void* state)
     lastFrameTicks = thisFrameTicks;
 #endif
 
-    Application* application = (Application*)state;
-    if (application->Loop(deltaTime))
+    if (application.Loop(deltaTime))
     {
         return SDL_APP_CONTINUE;
     }
     return SDL_APP_FAILURE;
 }
 
-SDL_AppResult SDL_AppEvent(void* state, SDL_Event* event)
+SDL_AppResult SDL_AppEvent(void* /* state */, SDL_Event* event)
 {
-    Application* application = (Application*)state;
-    application->OnEvent(*event);
+    application.OnEvent(*event);
     if (event->type == SDL_EVENT_QUIT)
     {
         return SDL_APP_SUCCESS;
@@ -73,8 +70,7 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* event)
     return SDL_APP_CONTINUE;
 }
 
-void SDL_AppQuit(void* state, SDL_AppResult /* result */)
+void SDL_AppQuit(void* /* state */, SDL_AppResult /* result */)
 {
-    Application* application = (Application*)state;
-    delete application;
+    application.Exit();
 }
