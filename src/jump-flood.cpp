@@ -52,7 +52,7 @@ void JumpFlood::Render(wgpu::CommandEncoder commandEncoder, wgpu::TextureView so
 
     WGPURenderPassDescriptor renderPassDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Render Pass",
+        .label = (StringView)"Jump Flood Render Pass",
         .colorAttachmentCount = 1,
         .colorAttachments = &colorAttachment,
         .depthStencilAttachment = nullptr,
@@ -128,7 +128,7 @@ wgpu::BindGroup JumpFlood::CreateBindGroup(wgpu::TextureView textureView, wgpu::
     };
     return m_Device.createBindGroup(WGPUBindGroupDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Bind Group",
+        .label = (StringView)"Jump Flood Bind Group",
         .layout = m_BindGroupLayout,
         .entryCount = bindGroupEntries.size(),
         .entries = bindGroupEntries.data()
@@ -139,7 +139,7 @@ void JumpFlood::InitTextures()
 {
     m_PingPongTexture = m_Device.createTexture(WGPUTextureDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Texture",
+        .label = (StringView)"Jump Flood Texture",
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding,
         .dimension = wgpu::TextureDimension::_2D,
         .size = {
@@ -161,7 +161,8 @@ void JumpFlood::InitTextures()
 
         m_PingPongTextureViews[i] = m_PingPongTexture.createView(WGPUTextureViewDescriptor {
             .nextInChain = nullptr,
-            .label = label.data,
+            // TODO: No null termination
+            .label = (StringView)label,
             .format = m_TextureFormat,
             .dimension = wgpu::TextureViewDimension::_2D,
             .baseMipLevel = 0,
@@ -176,7 +177,7 @@ void JumpFlood::InitTextures()
 void JumpFlood::InitSamplers()
 {
     m_Sampler = m_Device.createSampler(WGPUSamplerDescriptor {
-        .label = "Jump Flood Sampler",
+        .label = (StringView)"Jump Flood Sampler",
         .addressModeU = wgpu::AddressMode::ClampToEdge,
         .addressModeV = wgpu::AddressMode::ClampToEdge,
         .addressModeW = wgpu::AddressMode::Undefined,
@@ -222,7 +223,7 @@ void JumpFlood::InitBindGroups()
     };
     m_BindGroupLayout = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Bind Group Layout",
+        .label = (StringView)"Jump Flood Bind Group Layout",
         .entryCount = bindGroupLayoutEntries.size(),
         .entries = bindGroupLayoutEntries.data()
     });
@@ -237,7 +238,7 @@ void JumpFlood::InitRenderPipelines()
 {
     wgpu::PipelineLayout pipelineLayout = m_Device.createPipelineLayout(WGPUPipelineLayoutDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Pipeline Layout",
+        .label = (StringView)"Jump Flood Pipeline Layout",
         .bindGroupLayoutCount = 1,
         .bindGroupLayouts = (WGPUBindGroupLayout*)&m_BindGroupLayout
     });
@@ -251,7 +252,7 @@ void JumpFlood::InitRenderPipelines()
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
         .module = m_Shader->shaderModule,
-        .entryPoint = "jump_flood_init_frag",
+        .entryPoint = (StringView)"jump_flood_init_frag",
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -259,12 +260,12 @@ void JumpFlood::InitRenderPipelines()
     };
     WGPURenderPipelineDescriptor renderPipelineDescriptor {
         .nextInChain = nullptr,
-        .label = "Jump Flood Render Pipeline",
+        .label = (StringView)"Jump Flood Render Pipeline",
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = m_Shader->shaderModule,
-            .entryPoint = "jump_flood_vert",
+            .entryPoint = (StringView)"jump_flood_vert",
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,
@@ -288,8 +289,8 @@ void JumpFlood::InitRenderPipelines()
     };
 
     m_InitRenderPipeline = m_Device.createRenderPipeline(renderPipelineDescriptor);
-    fragmentState.entryPoint = "jump_flood_main_frag";
+    fragmentState.entryPoint = (StringView)"jump_flood_main_frag";
     m_MainPassRenderPipeline = m_Device.createRenderPipeline(renderPipelineDescriptor);
-    fragmentState.entryPoint = "jump_flood_final_pass_frag";
+    fragmentState.entryPoint = (StringView)"jump_flood_final_pass_frag";
     m_FinalPassRenderPipeline = m_Device.createRenderPipeline(renderPipelineDescriptor);
 }

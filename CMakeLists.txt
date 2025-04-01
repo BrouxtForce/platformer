@@ -5,7 +5,7 @@ project(Platformer)
 include(FetchContent)
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG b4c96355c9b51b54c4deb52e7d7cdfc7bf79bc2f
+    GIT_TAG f5befd2d29e66809cd1110a152e375a7f1981f06
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -67,6 +67,7 @@ else()
     target_compile_options(game PRIVATE -Wall -Wextra -pedantic)
 endif()
 
+target_compile_definitions(game PRIVATE RENDERER_BACKEND_WEBGPU)
 if (EMSCRIPTEN)
 	target_link_options(game PRIVATE
 	    -O3
@@ -79,7 +80,10 @@ if (EMSCRIPTEN)
     target_compile_options(game PRIVATE -O3)
 else()
     set(WEBGPU_BACKEND "DAWN")
-    target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+    target_compile_definitions(game PRIVATE IMGUI_IMPL_WEBGPU_BACKEND_DAWN)
+    # TODO: This is a quick fix to avoid casting wgpu::TextureView to ImTextureID, because
+    #   for whatever reason, this cast does not work
+    target_compile_definitions(game PRIVATE "ImTextureID=void*")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

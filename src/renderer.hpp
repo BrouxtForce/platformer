@@ -12,6 +12,21 @@
 #include "shader-library.hpp"
 #include "lighting.hpp"
 
+#if __EMSCRIPTEN__
+    #define WGPUOptionalBool_True true
+    #define WGPUOptionalBool_False false
+    #define WGPUTexelCopyTextureInfo WGPUImageCopyTexture
+    #define WGPUTexelCopyBufferLayout WGPUTextureDataLayout
+    #define WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal WGPUSurfaceGetCurrentTextureStatus_Success
+    #define WGPURequestDeviceCallbackInfo WGPURequestDeviceCallback
+    #define WGPUShaderSourceWGSL WGPUShaderModuleWGSLDescriptor
+    #define WGPUSType_ShaderSourceWGSL WGPUSType_ShaderModuleWGSLDescriptor
+
+    #define WEBGPU_STRING_NULL nullptr
+#else
+    #define WEBGPU_STRING_NULL WGPU_STRING_VIEW_INIT
+#endif
+
 class Renderer
 {
 public:
@@ -44,11 +59,11 @@ private:
     int m_Width = 0;
     int m_Height = 0;
 
-    wgpu::Instance m_Instance;
-    wgpu::Adapter m_Adapter;
-    wgpu::Device m_Device;
-    wgpu::Queue m_Queue;
-    wgpu::Surface m_Surface;
+    wgpu::Instance m_Instance = nullptr;
+    wgpu::Adapter m_Adapter = nullptr;
+    wgpu::Device m_Device = nullptr;
+    wgpu::Queue m_Queue = nullptr;
+    wgpu::Surface m_Surface = nullptr;
 
     ShaderLibrary m_ShaderLibrary;
 
@@ -59,7 +74,7 @@ private:
 
     wgpu::RenderPipeline GetRenderPipeline(Material* material, wgpu::TextureFormat textureFormat, bool depthStencil);
 
-    std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
+    // std::unique_ptr<wgpu::ErrorCallback> uncapturedErrorHandle;
 
     void RenderLighting(wgpu::CommandEncoder& commandEncoder, wgpu::TextureView& textureView, const Scene& scene, const Camera& camera);
 

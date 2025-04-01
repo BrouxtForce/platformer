@@ -310,17 +310,25 @@ std::unique_ptr<Shader> ShaderLibrary::LoadShader(wgpu::Device device, StringVie
     String shaderSource = Preprocess(ReadFile(filepath, &TransientArena), &TransientArena);
     shaderSource.NullTerminate();
 
+    WGPUShaderSourceWGSL wgslDescriptor {
+        .chain = {
+            .next = nullptr,
+            .sType = WGPUSType_ShaderSourceWGSL
+        },
+        // TODO: No null termination
+        .code = (StringView)shaderSource
+    };
+
+    /*
     wgpu::ShaderModuleWGSLDescriptor wgslDescriptor = wgpu::Default;
     wgslDescriptor.chain.next = nullptr;
     wgslDescriptor.chain.sType = wgpu::SType::ShaderModuleWGSLDescriptor;
     wgslDescriptor.code = shaderSource.data;
+    */
 
     wgpu::ShaderModuleDescriptor shaderModuleDescriptor = wgpu::Default;
-    shaderModuleDescriptor.label = filepath.data;
-#if WEBGPU_BACKEND_WGPU
-    shaderModuleDescriptor.hintCount = 0;
-    shaderModuleDescriptor.hints = nullptr;
-#endif
+    // TODO: No null termination
+    shaderModuleDescriptor.label = filepath;
     shaderModuleDescriptor.nextInChain = &wgslDescriptor.chain;
 
     wgpu::ShaderModule shaderModule = device.createShaderModule(shaderModuleDescriptor);

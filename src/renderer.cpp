@@ -39,7 +39,8 @@ bool Renderer::Init(SDL_Window* window)
     m_ShaderLibrary.Load(m_Device);
     MaterialManager::Init(m_ShaderLibrary, m_Device);
 
-    m_Format = m_Surface.getPreferredFormat(m_Adapter);
+    // TODO: Use the replacement for getPreferredFormat()
+    m_Format = WGPUTextureFormat_BGRA8Unorm;
 
     // Material bind group layout
     wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = wgpu::Default;
@@ -95,22 +96,24 @@ bool Renderer::Init(SDL_Window* window)
         };
         m_BindGroupLayouts[GROUP_CAMERA_INDEX] = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
             .nextInChain = nullptr,
-            .label = "Camera Bind Group Layout",
+            .label = (StringView)"Camera Bind Group Layout",
             .entryCount = bindGroupLayoutEntries.size(),
             .entries = bindGroupLayoutEntries.data()
         });
     }
 
     m_CameraBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
+        // TODO: Correct?
         .nextInChain = nullptr,
-        .label = nullptr,
+        .label = WEBGPU_STRING_NULL,
         .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
         .size = sizeof(Math::Matrix3x3),
         .mappedAtCreation = false
     });
     m_TimeBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
         .nextInChain = nullptr,
-        .label = nullptr,
+        // TODO: Correct?
+        .label = WEBGPU_STRING_NULL,
         .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
         .size = sizeof(float),
         .mappedAtCreation = false
@@ -208,14 +211,14 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     {
         wgpu::SurfaceTexture surfaceTexture;
         m_Surface.getCurrentTexture(&surfaceTexture);
-        if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::Success)
+        if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal)
         {
             return false;
         }
 
         wgpu::TextureViewDescriptor viewDescriptor;
         viewDescriptor.nextInChain = nullptr;
-        viewDescriptor.label = "Surface texture view";
+        viewDescriptor.label = (StringView)"Surface texture view";
         viewDescriptor.format = wgpuTextureGetFormat(surfaceTexture.texture);
         viewDescriptor.dimension = WGPUTextureViewDimension_2D;
         viewDescriptor.baseMipLevel = 0;
@@ -313,8 +316,10 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     m_Lighting.Render(m_Queue, commandEncoder, textureView);
 
 #if DEBUG
-    ImGui::Image(m_Lighting.m_JumpFlood.GetSDFTextureView(), ImVec2(256, 256));
+    wgpu::TextureView jumpFloodTextureView = m_Lighting.m_JumpFlood.GetSDFTextureView();
+    ImGui::Image(jumpFloodTextureView, ImVec2(256, 256));
     ImGui::Image(m_Lighting.m_RadianceTextureView, ImVec2(256, 256));
+    Breakpoint();
     for (wgpu::TextureView view : m_Lighting.m_CascadeTextureSliceViews)
     {
         ImGui::Image(view, ImVec2(256, 256));
@@ -501,7 +506,8 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(StringView shad
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
         .module = shader->shaderModule,
-        .entryPoint = fragmentEntry.data,
+        // TODO: fragmentEntry does not have to be null-terminated
+        .entryPoint = (StringView)fragmentEntry,
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -511,7 +517,7 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(StringView shad
     WGPUDepthStencilState depthStencilState {
         .nextInChain = nullptr,
         .format = s_DepthStencilFormat,
-        .depthWriteEnabled = true,
+        .depthWriteEnabled = WGPUOptionalBool_True,
         .depthCompare = wgpu::CompareFunction::Greater,
         .stencilFront = {},
         .stencilBack = {},
@@ -524,12 +530,14 @@ std::optional<WGPURenderPipeline> Renderer::CreateRenderPipeline(StringView shad
 
     WGPURenderPipelineDescriptor pipelineDescriptor {
         .nextInChain = nullptr,
-        .label = pipelineName.data,
+        // TODO: no null termination
+        .label = (StringView)pipelineName,
         .layout = m_PipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = shader->shaderModule,
-            .entryPoint = vertexEntry.data,
+            // TODO: no null termination
+            .entryPoint = (StringView)vertexEntry,
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,
@@ -596,7 +604,8 @@ wgpu::RenderPipeline Renderer::GetRenderPipeline(Material* material, wgpu::Textu
     WGPUFragmentState fragmentState {
         .nextInChain = nullptr,
         .module = shader->shaderModule,
-        .entryPoint = fragmentEntry.data,
+        // TODO: No null termination
+        .entryPoint = (StringView)fragmentEntry,
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -606,7 +615,7 @@ wgpu::RenderPipeline Renderer::GetRenderPipeline(Material* material, wgpu::Textu
     WGPUDepthStencilState depthStencilState {
         .nextInChain = nullptr,
         .format = s_DepthStencilFormat,
-        .depthWriteEnabled = true,
+        .depthWriteEnabled = WGPUOptionalBool_True,
         .depthCompare = wgpu::CompareFunction::Greater,
         .stencilFront = {},
         .stencilBack = {},
@@ -620,12 +629,14 @@ wgpu::RenderPipeline Renderer::GetRenderPipeline(Material* material, wgpu::Textu
     WGPURenderPipelineDescriptor pipelineDescriptor {
         .nextInChain = nullptr,
         // TODO: Label?
-        .label = nullptr,
+        // TODO: Correct?
+        .label = WEBGPU_STRING_NULL,
         .layout = m_PipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = shader->shaderModule,
-            .entryPoint = vertexEntry.data,
+            // TODO: No null termination
+            .entryPoint = (StringView)vertexEntry.data,
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,
@@ -664,26 +675,54 @@ bool Renderer::LoadAdapterSync()
     options.setDefault();
     options.compatibleSurface = m_Surface;
 
-    bool requestEnded = false;
-    bool requestSucceeded = false;
-    auto handle = m_Instance.requestAdapter(options, [&](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, const char* /* message */) {
-        if (status == wgpu::RequestAdapterStatus::Success)
-        {
-            m_Adapter = adapter;
-            requestSucceeded = true;
-        }
-        requestEnded = true;
-    });
+    struct RequestInfo
+    {
+        WGPUAdapter adapter = nullptr;
+        bool ended = false;
+    };
+    RequestInfo requestInfo;
 
 #if __EMSCRIPTEN__
-    while (!requestEnded)
+    auto callback = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char* message, void* userdata)
+#else
+    auto callback = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* userdata, void* /* userdata2 */)
+#endif
+    {
+        RequestInfo& requestInfo = *(RequestInfo*)userdata;
+
+        if (status == WGPURequestAdapterStatus_Success)
+        {
+            requestInfo.adapter = adapter;
+        }
+        else
+        {
+            Log::Error(message);
+        }
+        requestInfo.ended = true;
+    };
+
+#if __EMSCRIPTEN__
+    wgpuInstanceRequestAdapter(m_Instance, &options, callback, &requestInfo);
+
+    while (!requestInfo.ended)
     {
         emscripten_sleep(100);
     }
+#else
+    WGPURequestAdapterCallbackInfo callbackInfo {
+        .nextInChain = nullptr,
+        // TODO: What should the mode be?
+        .mode = WGPUCallbackMode_AllowSpontaneous,
+        .callback = callback,
+        .userdata1 = &requestInfo
+    };
+    wgpuInstanceRequestAdapter(m_Instance, &options, callbackInfo);
 #endif
 
-    assert(requestEnded);
-    if (!requestSucceeded)
+    assert(requestInfo.ended);
+    m_Adapter = requestInfo.adapter;
+
+    if (!m_Adapter)
     {
         Log::Error("Failed to get WebGPU adapter.");
         return false;
@@ -695,51 +734,63 @@ bool Renderer::LoadDeviceSync()
 {
     wgpu::DeviceDescriptor descriptor = {};
     descriptor.nextInChain = nullptr;
-    descriptor.label = "Main Device";
+    descriptor.label = (StringView)"Main Device";
     descriptor.requiredFeatureCount = 0;
     descriptor.requiredLimits = nullptr;
     descriptor.defaultQueue.nextInChain = nullptr;
-    descriptor.defaultQueue.label = "Default Queue";
-    descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason, const char* message, void* /* userData */) {
-        Log::Error("Device lost: reason %", reason);
-        if (message)
+    descriptor.defaultQueue.label = (StringView)"Default Queue";
+
+    struct RequestInfo
+    {
+        WGPUDevice device = nullptr;
+        bool ended = false;
+    };
+    RequestInfo requestInfo;
+
+#if __EMSCRIPTEN__
+    auto callback = [](WGPURequestDeviceStatus status, WGPUDevice device, const char* message, void* userdata)
+#else
+    auto callback = [](WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata, void* /* userdata2 */)
+#endif
+    {
+        RequestInfo& requestInfo = *(RequestInfo*)userdata;
+
+        if (status == WGPURequestDeviceStatus_Success)
+        {
+            requestInfo.device = device;
+        }
+        else
         {
             Log::Error(message);
         }
+        requestInfo.ended = true;
     };
-    bool requestEnded = false;
-    bool requestSucceeded = false;
-    auto handle = m_Adapter.requestDevice(descriptor, [&](wgpu::RequestDeviceStatus status, wgpu::Device device, const char* /* message */) {
-        if (status == wgpu::RequestDeviceStatus::Success)
-        {
-            m_Device = device;
-            requestSucceeded = true;
-        }
-        requestEnded = true;
-    });
 
 #if __EMSCRIPTEN__
-    while (!requestEnded)
+    wgpuAdapterRequestDevice(m_Adapter, &descriptor, callback, &requestInfo);
+
+    while (!requestInfo.ended)
     {
         emscripten_sleep(100);
     }
+#else
+    WGPURequestDeviceCallbackInfo callbackInfo {
+        .nextInChain = nullptr,
+        .mode = WGPUCallbackMode_AllowSpontaneous,
+        .callback = callback,
+        .userdata1 = &requestInfo,
+    };
+    wgpuAdapterRequestDevice(m_Adapter, &descriptor, callbackInfo);
 #endif
 
-    assert(requestEnded);
-    if (!requestSucceeded)
+    assert(requestInfo.ended);
+    m_Device = requestInfo.device;
+
+    if (!m_Device)
     {
         Log::Error("Failed to get WebGPU device.");
         return false;
     }
-
-    uncapturedErrorHandle = m_Device.setUncapturedErrorCallback([](wgpu::ErrorType type, const char* message) {
-        Log::Error("Uncaptured device error: type %", (int)type);
-        if (message)
-        {
-            Log::Error(message);
-        }
-    });
-
     return true;
 }
 
@@ -750,7 +801,8 @@ void Renderer::CreateDrawData(DrawData& drawData)
 
     drawData.transformBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
         .nextInChain = nullptr,
-        .label = nullptr,
+        // TODO: Correct?
+        .label = WEBGPU_STRING_NULL,
         .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform,
         .size = sizeof(TransformBindGroupData),
         .mappedAtCreation = false

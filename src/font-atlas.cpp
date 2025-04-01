@@ -61,7 +61,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     wgpu::TextureDescriptor textureDescriptor = wgpu::Default;
     textureDescriptor.size.width = m_Width;
     textureDescriptor.size.height = m_Height;
-    textureDescriptor.label = "Font Atlas Texture";
+    textureDescriptor.label = (StringView)"Font Atlas Texture";
     textureDescriptor.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
     textureDescriptor.format = wgpu::TextureFormat::R8Unorm;
     m_Texture = renderer.m_Device.createTexture(textureDescriptor);
@@ -84,7 +84,7 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
 
     m_QuadBuffer = renderer.m_Device.createBuffer(WGPUBufferDescriptor {
         .nextInChain = nullptr,
-        .label = nullptr,
+        .label = StringView{},
         .usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst,
         .size = s_QuadBufferSize,
         .mappedAtCreation = false
@@ -163,11 +163,11 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     }
 
     wgpu::RenderPipelineDescriptor pipelineDescriptor = wgpu::Default;
-    pipelineDescriptor.label = "Font Atlas Render Pipeline";
+    pipelineDescriptor.label = (StringView)"Font Atlas Render Pipeline";
     pipelineDescriptor.layout = pipelineLayout;
 
     pipelineDescriptor.vertex.module = textShader->shaderModule;
-    pipelineDescriptor.vertex.entryPoint = "text_vert";
+    pipelineDescriptor.vertex.entryPoint = (StringView)"text_vert";
 
     wgpu::BlendState blendState = wgpu::Default;
     blendState.color.operation = wgpu::BlendOperation::Add;
@@ -185,13 +185,13 @@ bool FontAtlas::Init(Renderer& renderer, int width, int height)
     wgpu::FragmentState fragmentState = wgpu::Default;
     fragmentState.targets = &colorTarget;
     fragmentState.targetCount = 1;
-    fragmentState.entryPoint = "text_frag";
+    fragmentState.entryPoint = (StringView)"text_frag";
     fragmentState.module = textShader->shaderModule;
     pipelineDescriptor.fragment = &fragmentState;
 
     wgpu::DepthStencilState depthStencilState = wgpu::Default;
     depthStencilState.format = renderer.s_DepthStencilFormat;
-    depthStencilState.depthWriteEnabled = false;
+    depthStencilState.depthWriteEnabled = WGPUOptionalBool_False;
     depthStencilState.stencilReadMask = 0;
     depthStencilState.stencilWriteMask = 0;
     depthStencilState.depthCompare = wgpu::CompareFunction::Always;
@@ -304,26 +304,26 @@ bool FontAtlas::LoadFont(wgpu::Queue queue, StringView path, const Charset& char
         glyph.advanceWidth = (float)advanceWidth * scale;
     }
 
-    queue.writeTexture(
-        WGPUImageCopyTexture {
-            .texture = m_Texture,
-            .mipLevel = 0,
-            .origin = wgpu::Origin3D{},
-            .aspect = wgpu::TextureAspect::All
-        },
-        bitmap.data,
-        bitmap.size,
-        WGPUTextureDataLayout {
-            .offset = 0,
-            .bytesPerRow = (uint32_t)(m_Width * sizeof(uint8_t)),
-            .rowsPerImage = (uint32_t)m_Height
-        },
-        WGPUExtent3D {
-            .width = (uint32_t)m_Width,
-            .height = (uint32_t)m_Height,
-            .depthOrArrayLayers = 1
-        }
-    );
+    WGPUTexelCopyTextureInfo destination {
+        .texture = m_Texture,
+        .mipLevel = 0,
+        .origin = wgpu::Origin3D{},
+        .aspect = wgpu::TextureAspect::All
+    };
+
+    WGPUTexelCopyBufferLayout layout {
+        .offset = 0,
+        .bytesPerRow = (uint32_t)(m_Width * sizeof(uint8_t)),
+        .rowsPerImage = (uint32_t)m_Height,
+    };
+
+    WGPUExtent3D writeSize {
+        .width = (uint32_t)m_Width,
+        .height = (uint32_t)m_Height,
+        .depthOrArrayLayers = 1
+    };
+
+    wgpuQueueWriteTexture(queue, &destination, bitmap.data, bitmap.size, &layout, &writeSize);
 
     return true;
 }

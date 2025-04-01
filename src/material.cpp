@@ -161,7 +161,7 @@ void MaterialManager::Init(const ShaderLibrary& shaderLibrary, wgpu::Device devi
     };
     wgpu::BindGroupLayout bindGroupLayout = device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
         .nextInChain = nullptr,
-        .label = "Material Bind Group Layout",
+        .label = (StringView)"Material Bind Group Layout",
         .entryCount = 1,
         .entries = &bindGroupLayoutEntry
     });
@@ -249,7 +249,8 @@ void MaterialManager::Init(const ShaderLibrary& shaderLibrary, wgpu::Device devi
         label.NullTerminate();
         material->buffer = device.createBuffer(WGPUBufferDescriptor {
             .nextInChain = nullptr,
-            .label = label.data,
+            // TODO: No null termination
+            .label = (StringView)label,
             .usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst,// | wgpu::BufferUsage::MapWrite,
             .size = materialSize,
             .mappedAtCreation = false
@@ -271,7 +272,8 @@ void MaterialManager::Init(const ShaderLibrary& shaderLibrary, wgpu::Device devi
         bindGroupLabel.NullTerminate();
         material->bindGroup = device.createBindGroup(WGPUBindGroupDescriptor {
             .nextInChain = nullptr,
-            .label = bindGroupLabel.data,
+            // TODO: no null termination
+            .label = (StringView)bindGroupLabel,
             .layout = bindGroupLayout,
             .entryCount = 1,
             .entries = &bindGroupEntry

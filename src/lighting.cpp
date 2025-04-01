@@ -61,7 +61,7 @@ void Lighting::Render(wgpu::Queue& queue, wgpu::CommandEncoder& commandEncoder, 
 
     WGPURenderPassDescriptor renderPassDescriptor {
         .nextInChain = nullptr,
-        .label = "Fill Cascades Render Pass",
+        .label = (StringView)"Fill Cascades Render Pass",
         .colorAttachmentCount = 1,
         .colorAttachments = &colorAttachment,
         .depthStencilAttachment = nullptr,
@@ -108,7 +108,7 @@ void Lighting::Render(wgpu::Queue& queue, wgpu::CommandEncoder& commandEncoder, 
 
     colorAttachment.view = framebuffer;
     colorAttachment.loadOp = wgpu::LoadOp::Load;
-    renderPassDescriptor.label = "Lighting Render Pass";
+    renderPassDescriptor.label = (StringView)"Lighting Render Pass";
 
     wgpu::RenderPassEncoder renderEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     renderEncoder.setPipeline(m_LightingRenderPipeline);
@@ -128,7 +128,7 @@ void Lighting::InitTextures()
 {
     m_CascadeTexture = m_Device.createTexture(WGPUTextureDescriptor {
         .nextInChain = nullptr,
-        .label = "Cascade Texture",
+        .label = (StringView)"Cascade Texture",
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding,
         .dimension = wgpu::TextureDimension::_2D,
         .size = {
@@ -150,7 +150,8 @@ void Lighting::InitTextures()
 
         m_CascadeTextureSliceViews[i] = m_CascadeTexture.createView(WGPUTextureViewDescriptor {
             .nextInChain = nullptr,
-            .label = label.data,
+            // TODO: No null termination
+            .label = (StringView)label,
             .format = s_CascadeTextureFormat,
             .dimension = wgpu::TextureViewDimension::_2D,
             .baseMipLevel = 0,
@@ -165,7 +166,7 @@ void Lighting::InitTextures()
     // TODO: This does not need to be the same size
     m_RadianceTexture = m_Device.createTexture(WGPUTextureDescriptor {
         .nextInChain = nullptr,
-        .label = "Radiance Texture",
+        .label = (StringView)"Radiance Texture",
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding,
         .dimension = wgpu::TextureDimension::_2D,
         .size = {
@@ -185,7 +186,7 @@ void Lighting::InitTextures()
 void Lighting::InitSamplers()
 {
     m_Sampler = m_Device.createSampler(WGPUSamplerDescriptor {
-        .label = "Radiance Cascades Sampler",
+        .label = (StringView)"Radiance Cascades Sampler",
         .addressModeU = wgpu::AddressMode::ClampToEdge,
         .addressModeV = wgpu::AddressMode::ClampToEdge,
         .addressModeW = wgpu::AddressMode::Undefined,
@@ -203,7 +204,7 @@ void Lighting::InitBuffers()
 {
     m_CascadeUniformBuffer = m_Device.createBuffer(WGPUBufferDescriptor {
         .nextInChain = nullptr,
-        .label = "Cascade Uniform Buffer",
+        .label = (StringView)"Cascade Uniform Buffer",
         .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Storage,
         .size = sizeof(UniformData) * s_NumCascades,
         .mappedAtCreation = false
@@ -229,7 +230,7 @@ void Lighting::InitBindGroupLayouts()
         };
         m_CascadeUniformsBindGroupLayout = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
             .nextInChain = nullptr,
-            .label = "Cascade Uniforms Bind Group Layout",
+            .label = (StringView)"Cascade Uniforms Bind Group Layout",
             .entryCount = 1,
             .entries = &bindGroupLayoutEntry
         });
@@ -279,7 +280,7 @@ void Lighting::InitBindGroupLayouts()
         };
         m_RadianceBindGroupLayout = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
             .nextInChain = nullptr,
-            .label = "Radiance Bind Group Layout",
+            .label = (StringView)"Radiance Bind Group Layout",
             .entryCount = bindGroupLayoutEntries.size(),
             .entries = bindGroupLayoutEntries.data()
         });
@@ -301,7 +302,7 @@ void Lighting::InitBindGroupLayouts()
         };
         m_CascadeBindGroupLayout = m_Device.createBindGroupLayout(WGPUBindGroupLayoutDescriptor {
             .nextInChain = nullptr,
-            .label = "Cascade Bind Group Layout",
+            .label = (StringView)"Cascade Bind Group Layout",
             .entryCount = 1,
             .entries = &bindGroupLayoutEntry
         });
@@ -322,7 +323,7 @@ void Lighting::InitBindGroups()
         };
         m_CascadeUniformBindGroup = m_Device.createBindGroup(WGPUBindGroupDescriptor {
             .nextInChain = nullptr,
-            .label = "Cascade Uniforms Bind Group",
+            .label = (StringView)"Cascade Uniforms Bind Group",
             .layout = m_CascadeUniformsBindGroupLayout,
             .entryCount = 1,
             .entries = &bindGroupEntry
@@ -361,7 +362,7 @@ void Lighting::InitBindGroups()
         };
         m_RadianceBindGroup = m_Device.createBindGroup(WGPUBindGroupDescriptor {
             .nextInChain = nullptr,
-            .label = "Radiance Bind Group",
+            .label = (StringView)"Radiance Bind Group",
             .layout = m_RadianceBindGroupLayout,
             .entryCount = bindGroupEntries.size(),
             .entries = bindGroupEntries.data()
@@ -382,7 +383,7 @@ void Lighting::InitBindGroups()
             };
             m_CascadeBindGroups[i] = m_Device.createBindGroup(WGPUBindGroupDescriptor {
                 .nextInChain = nullptr,
-                .label = "Cascade Bind Group",
+                .label = (StringView)"Cascade Bind Group",
                 .layout = m_CascadeBindGroupLayout,
                 .entryCount = 1,
                 .entries = &bindGroupEntry
@@ -400,7 +401,7 @@ void Lighting::InitRenderPipelines()
     };
     wgpu::PipelineLayout pipelineLayout = m_Device.createPipelineLayout(WGPUPipelineLayoutDescriptor {
         .nextInChain = nullptr,
-        .label = "Radiance Cascades Pipeline Layout",
+        .label = (StringView)"Radiance Cascades Pipeline Layout",
         .bindGroupLayoutCount = bindGroupLayouts.size(),
         .bindGroupLayouts = bindGroupLayouts.data()
     });
@@ -414,7 +415,7 @@ void Lighting::InitRenderPipelines()
     WGPUFragmentState cascadeFragmentState {
         .nextInChain = nullptr,
         .module = m_Shader->shaderModule,
-        .entryPoint = "merge_cascades_frag",
+        .entryPoint = (StringView)"merge_cascades_frag",
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -422,12 +423,12 @@ void Lighting::InitRenderPipelines()
     };
     m_CascadeRenderPipeline = m_Device.createRenderPipeline(WGPURenderPipelineDescriptor {
         .nextInChain = nullptr,
-        .label = "Cascade Render Pipeline",
+        .label = (StringView)"Cascade Render Pipeline",
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = m_Shader->shaderModule,
-            .entryPoint = "fullscreen_quad_vert",
+            .entryPoint = (StringView)"fullscreen_quad_vert",
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,
@@ -471,7 +472,7 @@ void Lighting::InitRenderPipelines()
     WGPUFragmentState lightingFragmentState {
         .nextInChain = nullptr,
         .module = m_Shader->shaderModule,
-        .entryPoint = "lighting_frag",
+        .entryPoint = (StringView)"lighting_frag",
         .constantCount = 0,
         .constants = nullptr,
         .targetCount = 1,
@@ -479,12 +480,12 @@ void Lighting::InitRenderPipelines()
     };
     m_LightingRenderPipeline = m_Device.createRenderPipeline(WGPURenderPipelineDescriptor {
         .nextInChain = nullptr,
-        .label = "Lighting Render Pipeline",
+        .label = (StringView)"Lighting Render Pipeline",
         .layout = pipelineLayout,
         .vertex = {
             .nextInChain = nullptr,
             .module = m_Shader->shaderModule,
-            .entryPoint = "fullscreen_quad_vert",
+            .entryPoint = (StringView)"fullscreen_quad_vert",
             .constantCount = 0,
             .constants = nullptr,
             .bufferCount = 0,

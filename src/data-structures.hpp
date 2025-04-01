@@ -10,6 +10,10 @@
 #include "memory-arena.hpp"
 #include "math.hpp"
 
+#if RENDERER_BACKEND_WEBGPU
+    #include <webgpu/webgpu.hpp>
+#endif
+
 template<typename T>
 struct PointerIterator
 {
@@ -399,6 +403,33 @@ struct StringView
         data = &c;
         size = 1;
     }
+
+#if RENDERER_BACKEND_WEBGPU
+    #if __EMSCRIPTEN__
+        constexpr operator const char*()
+        {
+            assert(data[size] == '\0');
+            return data;
+        }
+        constexpr bool operator==(const char* str) const
+        {
+            return *this == (StringView)str;
+        }
+    #else
+        constexpr StringView(WGPUStringView str)
+        {
+            data = str.data;
+            size = str.length;
+        }
+        constexpr operator WGPUStringView()
+        {
+            return WGPUStringView {
+                .data = data,
+                .length = size
+            };
+        }
+    #endif
+#endif
 
     StringView Substr(size_t position, size_t length = String::NPOS) const;
 
