@@ -368,6 +368,8 @@ struct String : Array<char>
     bool operator==(StringView str) const;
     bool operator!=(StringView str) const;
 
+    const char* CStr();
+
     static String Copy(StringView str, MemoryArena* arena);
 };
 

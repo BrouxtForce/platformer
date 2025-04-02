@@ -319,7 +319,6 @@ bool Renderer::Render(const Scene& scene, const Camera& camera)
     wgpu::TextureView jumpFloodTextureView = m_Lighting.m_JumpFlood.GetSDFTextureView();
     ImGui::Image(jumpFloodTextureView, ImVec2(256, 256));
     ImGui::Image(m_Lighting.m_RadianceTextureView, ImVec2(256, 256));
-    Breakpoint();
     for (wgpu::TextureView view : m_Lighting.m_CascadeTextureSliceViews)
     {
         ImGui::Image(view, ImVec2(256, 256));

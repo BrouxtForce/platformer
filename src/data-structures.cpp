@@ -174,6 +174,16 @@ bool String::operator!=(StringView str) const
     return !Equals(str);
 }
 
+const char* String::CStr()
+{
+    if (capacity > size && data[size] == '\0')
+    {
+        return data;
+    }
+    NullTerminate();
+    return data;
+}
+
 String String::Copy(StringView str, MemoryArena* arena)
 {
     String out;

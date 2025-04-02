@@ -9,7 +9,7 @@
 struct Material
 {
     StringView name;
-    Span<uint8_t> data;
+    Span<uint32_t> data;
     const Shader* shader = nullptr;
     wgpu::Buffer buffer;
     wgpu::BindGroup bindGroup;
@@ -19,7 +19,7 @@ struct Material
     void SetUniform(StringView name, T value);
 
     template<typename T>
-    std::optional<T> GetUniform(StringView name) const;
+    T* GetUniform(StringView name) const;
 
     void Flush(wgpu::Queue queue);
 };

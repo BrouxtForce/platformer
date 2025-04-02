@@ -92,7 +92,7 @@ template void Material::SetUniform<Math::float3>(StringView, Math::float3);
 template void Material::SetUniform<Math::float4>(StringView, Math::float4);
 
 template<typename T>
-std::optional<T> Material::GetUniform(StringView name) const
+T* Material::GetUniform(StringView name) const
 {
     constexpr Shader::DataType inputDataType = GetDataType<T>();
 
@@ -100,33 +100,33 @@ std::optional<T> Material::GetUniform(StringView name) const
     if (it == shader->m_UniformMap.end())
     {
         Log::Error("Could not find uniform '%'", name);
-        return std::nullopt;
+        return nullptr;
     }
     const Shader::UniformData& uniformData = it->second;
 
     if (uniformData.dataType != inputDataType)
     {
         Log::Error("Non-matching data types. Expected %, but got %", DataTypeToString(uniformData.dataType), DataTypeToString(inputDataType));
-        return std::nullopt;
+        return nullptr;
     }
 
     assert(uniformData.offset >= 0 && uniformData.offset + sizeof(T) <= data.size);
     assert(uniformData.offset % 4 == 0);
     static_assert(Shader::s_DataTypeSize[(int)inputDataType] == sizeof(T));
-    return *(T*)&data[uniformData.offset / 4];
+    return (T*)&data[uniformData.offset / 4];
 }
-template std::optional<int32_t> Material::GetUniform<int32_t>(StringView) const;
-template std::optional<uint32_t> Material::GetUniform<uint32_t>(StringView) const;
-template std::optional<float> Material::GetUniform<float>(StringView) const;
-template std::optional<Math::int2> Material::GetUniform<Math::int2>(StringView) const;
-template std::optional<Math::int3> Material::GetUniform<Math::int3>(StringView) const;
-template std::optional<Math::int4> Material::GetUniform<Math::int4>(StringView) const;
-template std::optional<Math::uint2> Material::GetUniform<Math::uint2>(StringView) const;
-template std::optional<Math::uint3> Material::GetUniform<Math::uint3>(StringView) const;
-template std::optional<Math::uint4> Material::GetUniform<Math::uint4>(StringView) const;
-template std::optional<Math::float2> Material::GetUniform<Math::float2>(StringView) const;
-template std::optional<Math::float3> Material::GetUniform<Math::float3>(StringView) const;
-template std::optional<Math::float4> Material::GetUniform<Math::float4>(StringView) const;
+template int32_t* Material::GetUniform<int32_t>(StringView) const;
+template uint32_t* Material::GetUniform<uint32_t>(StringView) const;
+template float* Material::GetUniform<float>(StringView) const;
+template Math::int2* Material::GetUniform<Math::int2>(StringView) const;
+template Math::int3* Material::GetUniform<Math::int3>(StringView) const;
+template Math::int4* Material::GetUniform<Math::int4>(StringView) const;
+template Math::uint2* Material::GetUniform<Math::uint2>(StringView) const;
+template Math::uint3* Material::GetUniform<Math::uint3>(StringView) const;
+template Math::uint4* Material::GetUniform<Math::uint4>(StringView) const;
+template Math::float2* Material::GetUniform<Math::float2>(StringView) const;
+template Math::float3* Material::GetUniform<Math::float3>(StringView) const;
+template Math::float4* Material::GetUniform<Math::float4>(StringView) const;
 
 void Material::Flush(wgpu::Queue queue)
 {
@@ -195,7 +195,7 @@ void MaterialManager::Init(const ShaderLibrary& shaderLibrary, wgpu::Device devi
         material->shader = shader;
         material->name = String::Copy(table, &GlobalArena);
 
-        material->data.data = GlobalArena.Alloc<uint8_t>(materialSize);
+        material->data.data = GlobalArena.Alloc<uint32_t>(materialSize / 4);
         material->data.size = materialSize;
 
         // Write material properties from config

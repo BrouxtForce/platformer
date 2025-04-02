@@ -229,6 +229,73 @@ bool Application::LoopEditor(float deltaTime)
 #if DEBUG
     ImGuiMemoryDiagnosticsWindow();
 
+    ImGui::Begin("Material properties");
+
+    Array<String> materialNames = MaterialManager::GetMaterialNames(&TransientArena);
+    assert(materialNames.size > 0);
+
+    {
+        static size_t materialIndex = 0;
+
+        if (ImGui::BeginCombo("Material", materialNames[materialIndex].CStr()))
+        {
+            for (size_t i = 0; i < materialNames.size; i++)
+            {
+                if (ImGui::Selectable(materialNames[i].CStr(), i == materialIndex))
+                {
+                    materialIndex = i;
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        Material* material = MaterialManager::GetMaterial(materialNames[materialIndex]);
+        assert(material != nullptr);
+
+        String uniformName;
+        uniformName.arena = &TransientArena;
+        for (auto [key, uniformData] : material->shader->m_UniformMap)
+        {
+            // TODO: Is this necessary?
+            uniformName.Clear();
+            uniformName += key;
+            uniformName.NullTerminate();
+
+            #define CASE(DATA_TYPE, CAST_TYPE, INPUT_FUNC) { \
+                auto data = material->GetUniform<DATA_TYPE>(uniformName); \
+                assert(data != nullptr); \
+                if (ImGui::INPUT_FUNC(uniformName.data, (CAST_TYPE*)data)) \
+                { \
+                    material->updated = true; \
+                } \
+                break; \
+            } (void)0
+
+            switch (uniformData.dataType)
+            {
+                case Shader::DataType::Float:  CASE(float, float, DragFloat);
+                case Shader::DataType::Float2: CASE(Math::float2, float, DragFloat2);
+                case Shader::DataType::Float3: CASE(Math::float3, float, ColorEdit3);
+                case Shader::DataType::Float4: CASE(Math::float4, float, DragFloat4);
+
+                case Shader::DataType::Int32: CASE(int32_t, int, DragInt);;
+                case Shader::DataType::Int2:  CASE(Math::int4, int, DragInt4);
+                case Shader::DataType::Int3:  CASE(Math::int4, int, DragInt4);
+                case Shader::DataType::Int4:  CASE(Math::int4, int, DragInt4);
+
+                case Shader::DataType::Uint32: CASE(uint32_t, int, DragInt);
+                case Shader::DataType::Uint2:  CASE(Math::uint2, int, DragInt2);
+                case Shader::DataType::Uint3:  CASE(Math::uint3, int, DragInt3);
+                case Shader::DataType::Uint4:  CASE(Math::uint4, int, DragInt4);
+
+                default:
+                    Log::Error("Invalid shader data type: %", (int)uniformData.dataType);
+            }
+        }
+    }
+
+    ImGui::End();
+
     ImGui::Begin("Inspector");
     if (inspectedEntity != nullptr)
     {
@@ -266,14 +333,10 @@ bool Application::LoopEditor(float deltaTime)
         ImGui::DragInt("Rotation", &rotation);
         inspectedEntity->transform.rotation = (float)rotation * Math::DEG_TO_RAD;
 
-        // TODO: Material properties
-        // ImGui::ColorEdit3("Color", (float*)&inspectedEntity->color);
-
         String materialName = String::Copy(inspectedEntity->material->name, &TransientArena);
         materialName.NullTerminate();
         if (ImGui::BeginCombo("material", materialName.data))
         {
-            Array<String> materialNames = MaterialManager::GetMaterialNames(&TransientArena);
             for (String name : materialNames)
             {
                 name.NullTerminate();
