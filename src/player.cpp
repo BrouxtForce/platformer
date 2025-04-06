@@ -1,6 +1,7 @@
 #include "player.hpp"
 #include "physics.hpp"
 #include "shader-library.hpp"
+#include "material.hpp"
 
 Player::Player(Entity* entity)
     : m_Entity(entity) {}
@@ -116,7 +117,7 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
                 gravityVelocity = 0.0f;
                 return false;
             }
-            gravityVelocity -= collisionData.normal * Math::Dot(collisionData.normal, gravityVelocity);
+            gravityVelocity -= Math::Normalize(gravityVelocity) * Math::Dot(collisionData.normal, gravityVelocity);
             return true;
         }
     );
@@ -159,6 +160,38 @@ void Player::Update(const Scene& scene, float cameraRotation, float currentTime,
         }
     }
     */
+
+    UpdateMaterial(Math::Sign<float>(horizontalInput));
+}
+
+void Player::UpdateMaterial(int inputSign)
+{
+    if (m_PrevSign != inputSign && inputSign != 0)
+    {
+        m_PrevSign = inputSign;
+        m_Entity->transform.scale.x *= -1.0f;
+    }
+
+    Material* material = m_Entity->material;
+
+    if (m_LeftEyebrowAngle == 0.0f)
+    {
+        // TOOD: GetUniform() can return nullptr, which will cause a crash
+        m_LeftEyebrowAngle = *material->GetUniform<float>("left_eyebrow_angle");
+        m_RightEyebrowAngle = *material->GetUniform<float>("right_eyebrow_angle");
+        m_LeftEyebrowHeight = *material->GetUniform<float>("left_eyebrow_height");
+        m_RightEyebrowHeight = *material->GetUniform<float>("right_eyebrow_height");
+    }
+
+    float speed = Math::Length(velocity);
+    float t = 1.0f - std::exp(-10.0f * speed);
+
+    material->SetUniform("left_eyebrow_angle", m_LeftEyebrowAngle * t);
+    material->SetUniform("right_eyebrow_angle", m_RightEyebrowAngle * t);
+
+    t = 1.5f - t;
+    material->SetUniform("left_eyebrow_height", m_LeftEyebrowHeight * t);
+    material->SetUniform("right_eyebrow_height", m_RightEyebrowHeight * t);
 }
 
 void Player::Jump()

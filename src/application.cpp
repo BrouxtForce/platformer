@@ -237,6 +237,8 @@ bool Application::LoopEditor(float deltaTime)
     {
         static size_t materialIndex = 0;
 
+        ImGui::PushItemWidth(200);
+
         if (ImGui::BeginCombo("Material", materialNames[materialIndex].CStr()))
         {
             for (size_t i = 0; i < materialNames.size; i++)
@@ -264,7 +266,7 @@ bool Application::LoopEditor(float deltaTime)
             #define CASE(DATA_TYPE, CAST_TYPE, INPUT_FUNC) { \
                 auto data = material->GetUniform<DATA_TYPE>(uniformName); \
                 assert(data != nullptr); \
-                if (ImGui::INPUT_FUNC(uniformName.data, (CAST_TYPE*)data)) \
+                if (ImGui::INPUT_FUNC(uniformName.data, (CAST_TYPE*)data, (CAST_TYPE)0.01f)) \
                 { \
                     material->updated = true; \
                 } \
@@ -292,6 +294,8 @@ bool Application::LoopEditor(float deltaTime)
                     Log::Error("Invalid shader data type: %", (int)uniformData.dataType);
             }
         }
+
+        ImGui::PopItemWidth();
     }
 
     ImGui::End();
@@ -389,6 +393,11 @@ bool Application::LoopEditor(float deltaTime)
     m_Camera.transform.scale.y = m_Camera.transform.scale.x;
 
     static char sceneFilepath[100] { 0 };
+    if (sceneFilepath[0] == '\0')
+    {
+        size_t size = Math::Min(firstSceneFilepath.size, sizeof(sceneFilepath) - 1);
+        std::memcpy(sceneFilepath, firstSceneFilepath.data, size);
+    }
     ImGui::InputText("Scene path:", sceneFilepath, sizeof(sceneFilepath));
     if (ImGui::Button("Load"))
     {

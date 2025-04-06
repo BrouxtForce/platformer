@@ -47,4 +47,11 @@ private:
 
     float m_PrevHorizontalInput = 0.0f;
     bool m_ShouldFlipInput = false;
+
+    int m_PrevSign = 1;
+    float m_LeftEyebrowAngle = 0.0f;
+    float m_RightEyebrowAngle = 0.0f;
+    float m_LeftEyebrowHeight = 0.0f;
+    float m_RightEyebrowHeight = 0.0f;
+    void UpdateMaterial(int inputSign);
 };

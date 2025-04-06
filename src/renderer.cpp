@@ -729,15 +729,47 @@ bool Renderer::LoadAdapterSync()
     return true;
 }
 
+#if !__EMSCRIPTEN__
+void UncapturedErrorCallback(const WGPUDevice* /* device */, WGPUErrorType type, WGPUStringView message, void* /* userdata1 */, void* /* userdata2 */)
+{
+    StringView typeString;
+    switch (type)
+    {
+        case WGPUErrorType_Validation:  typeString = "Validation"; break;
+        case WGPUErrorType_OutOfMemory: typeString = "Out of memory"; break;
+        case WGPUErrorType_Internal:    typeString = "Internal"; break;
+        case WGPUErrorType_Unknown:     typeString = "Unknown"; break;
+
+        default:
+            Log::Error("Invalid error type: %", type);
+    }
+
+    Log::Error("WebGPU % error:\n%", typeString, message);
+}
+#endif
+
 bool Renderer::LoadDeviceSync()
 {
-    wgpu::DeviceDescriptor descriptor = {};
-    descriptor.nextInChain = nullptr;
-    descriptor.label = (StringView)"Main Device";
-    descriptor.requiredFeatureCount = 0;
-    descriptor.requiredLimits = nullptr;
-    descriptor.defaultQueue.nextInChain = nullptr;
-    descriptor.defaultQueue.label = (StringView)"Default Queue";
+    WGPUDeviceDescriptor descriptor {
+        .nextInChain = nullptr,
+        .label = (StringView)"Main Device",
+        .requiredFeatureCount = 0,
+        .requiredFeatures = nullptr,
+        .requiredLimits = nullptr,
+        .defaultQueue = {
+            .nextInChain = nullptr,
+            .label = (StringView)"Default Queue"
+        },
+        // TODO: Implement for emscripten
+#if !__EMSCRIPTEN__
+        // TODO: Set device lost callback
+        .deviceLostCallbackInfo = {},
+        .uncapturedErrorCallbackInfo = {
+            .nextInChain = nullptr,
+            .callback = UncapturedErrorCallback
+        }
+#endif
+    };
 
     struct RequestInfo
     {

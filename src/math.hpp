@@ -164,6 +164,12 @@ namespace Math
         return value;
     }
 
+    template<typename T>
+    inline int Sign(T value)
+    {
+        return (value > 0) - (value < 0);
+    }
+
     constexpr double PI = M_PI;
     constexpr double RAD_TO_DEG = 180.0 / PI;
     constexpr double DEG_TO_RAD = PI / 180.0;
